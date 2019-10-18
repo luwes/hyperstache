@@ -1,3 +1,5 @@
+/* Adapted from HTM - Apache License 2.0 - Jason Miller */
+
 import { helpers } from './helpers.js';
 import { escapeExpression, parseArgs, objectPath } from './utils.js';
 

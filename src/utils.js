@@ -1,3 +1,5 @@
+/* Some code from Handlebars - MIT License - Yehuda Katz */
+
 export function objectPath(obj, paths) {
   paths = paths.split('.');
   let val = obj;
