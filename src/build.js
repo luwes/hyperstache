@@ -14,6 +14,8 @@ const CHILD_RECURSE = 2;
 const EXPR_VAR = 3;
 const EXPR_RAW = 4;
 const EXPR_BLOCK = 5;
+const EXPR_COMMENT = 6;
+const EXPR_SPECIAL_COMMENT = 7;
 
 export const build = function(statics) {
   let str;
@@ -69,42 +71,34 @@ export const build = function(statics) {
       } else if (char === '"' || char === "'") {
         quote = char;
         buffer += char;
-      } else if (charHead === '}}' && str[j + 2] !== '}') {
+      } else if (expr === EXPR_SPECIAL_COMMENT && charHead === '--' && str.substr(j + 2, 2) === '}}') {
+        commit();
+        mode = MODE_TEXT;
+        j += 3;
+      } else if (expr !== EXPR_SPECIAL_COMMENT && charHead === '}}' && str[j + 2] !== '}') {
         commit();
         mode = MODE_TEXT;
         j++;
       } else if (MODE_EXPR_APPEND) {
         if (char === ' ' || char === '\t' || char === '\n' || char === '\r') {
-          // Only commit if there is buffer, ignore spaces after `{{`.
-          if (buffer) {
+          // Only commit if there is buffer, ignore spaces after `{{` unless
+          // it's a comment.
+          if (buffer && expr !== EXPR_COMMENT && expr !== EXPR_SPECIAL_COMMENT) {
             commit();
           }
-        } else if ((!buffer && char === '{') || char === '}') {
+        } else if (expr !== EXPR_SPECIAL_COMMENT && ((!buffer && char === '{') || char === '}')) {
           // First `{` after opening expression `{{`.
           expr = EXPR_RAW;
         } else if ((!buffer && char === '!')) {
-          const isSpecialComment = str.substr(j, 3) === '!--';
-          // Consume the entire comment
-          for (; j < str.length; j++) {
-            if (isSpecialComment) {
-              const endOfComment = str.substr(j, 4);
-              if (endOfComment === '--}}') {
-                j += 4;
-                break;
-              }
-            } else {
-              const endOfComment = str.substr(j, 2);
-              if (endOfComment === '}}') {
-                j += 2;
-                break;
-              }
-            }
+          const isSpecialComment = str.substr(j + 1, 2) === '--';
+          if (isSpecialComment) {
+            expr = EXPR_SPECIAL_COMMENT
+            j += 2;
+          } else {
+            expr = EXPR_COMMENT
           }
 
-          mode = MODE_TEXT;
-          // Since we're iterating over j in the loop above and the outer loop
-          // increases j as well, we need to decrease j once here
-          j--;
+          commit('');
         } else if (!buffer && char === '#') {
           // First `#` after opening expression `{{`.
           current = [current];
@@ -114,6 +108,8 @@ export const build = function(statics) {
           mode = current;
           (current = current[0]).push(mode, CHILD_RECURSE);
           // mode = MODE_SLASH;
+        } else if (expr == EXPR_COMMENT || expr == EXPR_SPECIAL_COMMENT) {
+          // Ignore comments
         } else {
           buffer += char;
         }
@@ -220,6 +216,6 @@ export const evaluate = (h, built, fields, context) => {
   }
 
   const args = [statics].concat(exprs);
-  // console.log('ARGS', args);
+  console.log('ARGS', args);
   return h(args);
 };
