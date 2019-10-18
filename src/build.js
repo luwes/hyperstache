@@ -82,6 +82,29 @@ export const build = function(statics) {
         } else if ((!buffer && char === '{') || char === '}') {
           // First `{` after opening expression `{{`.
           expr = EXPR_RAW;
+        } else if ((!buffer && char === '!')) {
+          const isSpecialComment = str.substr(j, 3) === '!--';
+          // Consume the entire comment
+          for (; j < str.length; j++) {
+            if (isSpecialComment) {
+              const endOfComment = str.substr(j, 4);
+              if (endOfComment === '--}}') {
+                j += 4;
+                break;
+              }
+            } else {
+              const endOfComment = str.substr(j, 2);
+              if (endOfComment === '}}') {
+                j += 2;
+                break;
+              }
+            }
+          }
+
+          mode = MODE_TEXT;
+          // Since we're iterating over j in the loop above and the outer loop
+          // increases j as well, we need to decrease j once here
+          j--;
         } else if (!buffer && char === '#') {
           // First `#` after opening expression `{{`.
           current = [current];
