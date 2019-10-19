@@ -1,5 +1,6 @@
 /* Adapted from HTM - Apache License 2.0 - Jason Miller */
 
+import { inspect } from 'util';
 import { helpers } from './helpers.js';
 import { escapeExpression, parseArgs, objectPath } from './utils.js';
 
@@ -14,6 +15,7 @@ const CHILD_RECURSE = 2;
 const EXPR_VAR = 3;
 const EXPR_RAW = 4;
 const EXPR_BLOCK = 5;
+const EXPR_INVERSE = 6;
 
 export const build = function(statics) {
   let str;
@@ -26,7 +28,7 @@ export const build = function(statics) {
   let char;
   let charHead; // current + next char
 
-  // console.log('STATICS', statics);
+  // log('STATICS', statics);
   for (let i = 0; i < statics.length; i++) {
     // This can be a SafeString obj, convert to string.
     str = '' + statics[i];
@@ -84,12 +86,15 @@ export const build = function(statics) {
           expr = EXPR_RAW;
         } else if (!buffer && char === '#') {
           // First `#` after opening expression `{{`.
-          current = [current];
+          // [1] is reserved for `if`, [2] for `else`.
+          const block = [current];
+          current = block[1] = [block];
+          block[2] = [block];
           expr = EXPR_BLOCK;
           mode = MODE_EXPR_SET;
         } else if (char === '/') {
-          mode = current;
-          (current = current[0]).push(mode, CHILD_RECURSE);
+          mode = current[0];
+          (current = current[0][0]).push(mode, CHILD_RECURSE);
           // mode = MODE_SLASH;
         } else {
           buffer += char;
@@ -112,8 +117,14 @@ export const build = function(statics) {
       current.push(field || buffer, CHILD_APPEND);
     } else if (mode >= MODE_EXPR_SET && buffer) {
       if (mode === MODE_EXPR_SET) {
-        current.push(field || buffer, expr);
-        mode = MODE_EXPR_APPEND;
+        if (buffer === 'else' || buffer === '^') {
+          current = current[0][2];
+          expr = EXPR_INVERSE;
+          mode = MODE_EXPR_SET;
+        } else {
+          current.push(field || buffer, expr);
+          mode = MODE_EXPR_APPEND;
+        }
       } else {
         // Merge expression args in an array, they have to be applied
         // to a function later anyway. Array creation is inevitable.
@@ -133,10 +144,10 @@ export const build = function(statics) {
 export const evaluate = (h, built, fields, context) => {
   const statics = [];
   const exprs = [];
-  // console.log('BUILT', built);
+  // log('BUILT', built);
   for (let i = 1; i < built.length; i++) {
     const field = built[i];
-    // console.log('FIELD', field);
+    // log('FIELD', field);
     const type = built[++i];
 
     if (typeof field === 'number') {
@@ -152,7 +163,7 @@ export const evaluate = (h, built, fields, context) => {
           value = helpers[fnName].apply(context, field.map(parseArgs(context)));
         }
       }
-      // console.log('VALUE', value);
+      // log('VALUE', value);
       if (value) {
         if (type === EXPR_VAR && typeof value === 'string') {
           value = escapeExpression(value);
@@ -164,26 +175,35 @@ export const evaluate = (h, built, fields, context) => {
       }
     } else if (type === CHILD_RECURSE) {
       // type === CHILD_RECURSE
-      // field = [ [Circular], 'bold', 5, 'body', 3 ]
-      const [fields] = field.splice(1, 2);
-      // `fields` can be a function name or array of expression instructions.
-      let args = [].concat(fields);
+      // field = [ [Circular], ['bold', 5, 'body', 3] ]
+      // log('FIELD', field);
+      const [expr] = field[1].splice(1, 2);
+      // `expr` can be a function name or array of expression instructions.
+      let args = [].concat(expr);
+      // log('EXPR', expr);
       const fnName = args.shift();
       if (helpers[fnName]) {
         const results = [];
-        const fn = ctx => {
+        const block = ifOrElse => ctx => {
           // Handlebar helpers expect string operations but `evaluate`
           // returns arrays. Save these arrays in the context `results`, make
           // the helper return a template and fill the var expressions later.
-          const count = results.push(evaluate(h, field, fields, ctx));
+          const count = results.push(evaluate(h, field[ifOrElse], fields, ctx));
           return `{{{${count - 1}}}}`;
         };
 
+        // log('ARGUMENTS', args, context);
         args = args.map(parseArgs(context));
-        args.push({ fn });
+        const options = {
+          fn: block(1),
+          inverse: block(2),
+          data: {}
+        };
+        args.push(options);
 
         const template = helpers[fnName].apply(context, args);
-        // console.log('RESULTS', results);
+        // log('TEMPLATE', template);
+        // log('RESULTS', results);
         const result = evaluate(h, build([template]), [], results);
         exprs.push(result);
       } else {
@@ -197,6 +217,10 @@ export const evaluate = (h, built, fields, context) => {
   }
 
   const args = [statics].concat(exprs);
-  // console.log('ARGS', args);
+  // log('ARGS', args);
   return h(args);
 };
+
+function log(label, ...args) {
+  console.log(label, ...args.map(a => inspect(a, { depth: 10, colors: true })));
+}

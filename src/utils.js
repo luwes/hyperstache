@@ -30,7 +30,7 @@ export function parseArgs(context) {
       arg = false;
     } else if (!isNaN(+arg)) {
       arg = +arg;
-    } else if (context[arg]) {
+    } else if (context && arg in context) {
       arg = context[arg];
     }
     return arg;
