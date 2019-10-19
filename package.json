@@ -13,7 +13,7 @@
     "build": "rollup -c --silent && agadoo",
     "watch": "rollup -wc --silent",
     "test": "tape -r esm test/test.js | tap-spec",
-    "test:watch": "chokidar '**/*.js' -c 'yarn test' --initial --silent"
+    "test:watch": "chokidar '(src|test)/**/*.js' -c 'yarn test' --initial --silent"
   },
   "author": "Wesley Luyten <me@wesleyluyten.com> (https://wesleyluyten.com)",
   "license": "MIT",

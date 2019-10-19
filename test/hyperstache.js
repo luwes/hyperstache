@@ -158,26 +158,83 @@ test('if/else/unless without chaining', t => {
   t.end();
 });
 
-test('each', t => {
+test('if/else with chaining', t => {
+  // no chained variant
+  t.deepEqual(hbs`
+    {{#if false}}
+      Hello
+    {{else}}
+      {{#if true}}
+        Bye
+      {{/if}}
+    {{/if}}
+  `(), 'Bye');
+
+  t.deepEqual(hbs`
+    {{#if false}}
+      Hello
+    {{else if true}}
+      Bye
+    {{/if}}
+    `({ truthy: 1 }), 'Bye');
+
+  t.deepEqual(hbs`
+    {{#if false}}
+      Hello
+    {{else if false}}
+      Hey again
+    {{else if true}}
+      {{#if truthy}}
+        Bye
+      {{/if}}
+    {{/if}}
+    99
+    `({ truthy: 1 }), ['Bye', '99']);
+
+  t.deepEqual(hbs`
+    {{#if false}}
+      99 licenses
+    {{else unless license}}
+      WARNING: This entry does not have a license!
+    {{/unless}}
+  `({ license: false }), 'WARNING: This entry does not have a license!');
+
+  t.end();
+});
+
+test('each for arrays', t => {
   t.deepEqual(hbs`
     {{#each comments}}
-      <div class="comment">
+      <div class="comment{{@index}}">
         <h2>{{subject}}</h2>
+        {{#if @first}},{{/if}}
+        {{#if @last}}last one{{/if}}
         {{{body}}}
       </div>
     {{/each}}
   `({ comments: [
     { subject: 'Hello', body: hbs`<p>World</p>`() },
-    { subject: 'Handle', body: hbs`<p>Bars</p>`() }
+    { subject: 'Handle', body: hbs`<p>Bars</p>`() },
+    { subject: 'You', body: hbs`<p>will pass!</p>`() }
   ] }),
   [
-    { tag: 'div', props: { class: 'comment' }, children: [
+    { tag: 'div', props: { class: 'comment0' }, children: [
       { tag: 'h2', props: null, children: ['Hello'] },
+      ',',
+      '',
       { tag: 'p', props: null, children: ['World'] }
     ] },
-    { tag: 'div', props: { class: 'comment' }, children: [
+    { tag: 'div', props: { class: 'comment1' }, children: [
       { tag: 'h2', props: null, children: ['Handle'] },
+      '',
+      '',
       { tag: 'p', props: null, children: ['Bars'] }
+    ] },
+    { tag: 'div', props: { class: 'comment2' }, children: [
+      { tag: 'h2', props: null, children: ['You'] },
+      '',
+      'last one',
+      { tag: 'p', props: null, children: ['will pass!'] }
     ] }
   ]
   );
