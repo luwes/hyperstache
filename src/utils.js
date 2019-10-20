@@ -5,6 +5,16 @@ export function log(label, ...args) {
   console.log(label, ...args.map(a => inspect(a, { depth: 10, colors: true })));
 }
 
+export function isEmpty(value) {
+  if (!value && value !== 0) {
+    return true;
+  } else if (Array.isArray(value) && value.length === 0) {
+    return true;
+  } else {
+    return false;
+  }
+}
+
 export function parseVar(name, context, options) {
   const data = options && options.data;
   const value = name[0] === '@' &&

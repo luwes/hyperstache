@@ -217,7 +217,8 @@ export const evaluate = (h, built, fields, context, options) => {
           fn: block([0].concat(field[1].slice(3))),
           // No discard for the else block.
           inverse: block(field[2]),
-          data: {}
+          data: {},
+          hash: {}
         });
 
         const template = helpers[fnName].apply(context, args);
