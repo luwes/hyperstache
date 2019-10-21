@@ -16,7 +16,6 @@ const EXPR_RAW = 4;
 const EXPR_BLOCK = 5;
 const EXPR_INVERSE = 6;
 const EXPR_COMMENT = 7;
-const EXPR_SPECIAL_COMMENT = 8;
 
 export const build = function(statics) {
   let str;
@@ -27,7 +26,10 @@ export const build = function(statics) {
   let quote = '';
   let current = [0];
   let char;
-  let charHead; // current + next char
+  let openTag = '{{';
+  let closeTag = '}}';
+  let openSlice;
+  let closeSlice;
 
   // log('STATICS', statics);
   for (let i = 0; i < statics.length; i++) {
@@ -47,10 +49,11 @@ export const build = function(statics) {
 
     for (let j = 0; j < str.length; j++) {
       char = str[j];
-      charHead = char + str[j + 1];
+      openSlice = str.substr(j, openTag.length);
+      closeSlice = str.substr(j, closeTag.length);
 
       if (mode === MODE_TEXT) {
-        if (charHead === '{{') {
+        if (openSlice === openTag) {
           commit();
           if (!lastBuffer) {
             // Add a split if there is no content before the expression.
@@ -72,43 +75,40 @@ export const build = function(statics) {
       } else if (char === '"' || char === "'") {
         quote = char;
         buffer += char;
-      } else if (expr === EXPR_SPECIAL_COMMENT && charHead === '--' && str.substr(j + 2, 2) === '}}') {
-        commit();
+      } else if (closeSlice === closeTag && str[j + closeTag.length] !== '}') {
+        j += closeTag.length - 1;
+        if (expr == EXPR_COMMENT) {
+          commit('');
+          closeTag = '}}';
+        } else {
+          commit();
+        }
         mode = MODE_TEXT;
-        j += 3;
-      } else if (expr !== EXPR_SPECIAL_COMMENT && charHead === '}}' && str[j + 2] !== '}') {
-        commit();
-        mode = MODE_TEXT;
-        j++;
       } else if (MODE_EXPR_APPEND) {
-        if (char === ' ' || char === '\t' || char === '\n' || char === '\r') {
+        if (expr == EXPR_COMMENT) {
+          buffer += char;
+          if (buffer === '--') {
+            closeTag = '--}}';
+          }
+        } else if (char === ' ' || char === '\t' || char === '\n' || char === '\r') {
           if (expr === EXPR_INVERSE) {
             // Add `else` chaining.
             // e.g. transforms {{else if }} into {{else}}{{#/if }}
-            str = '{{#/' + buffer + str.slice(j); // {{#/ autoclose
+            str = `{{#/${buffer}${str.substr(j)}`; // {{#/ autoclose
             mode = MODE_TEXT;
             j = -1;
             buffer = '';
           } else {
-            // Only commit if there is buffer, ignore spaces after `{{` unless
-            // it's a comment.
-            if (buffer && expr !== EXPR_COMMENT && expr !== EXPR_SPECIAL_COMMENT) {
+            // Only commit if there is buffer, ignore spaces after `{{`.
+            if (buffer) {
               commit();
             }
           }
-        } else if (expr !== EXPR_SPECIAL_COMMENT && ((!buffer && char === '{') || char === '}')) {
+        } else if ((!buffer && char === '{') || char === '}') {
           // First `{` after opening expression `{{`.
           expr = EXPR_RAW;
         } else if ((!buffer && char === '!')) {
-          const isSpecialComment = str.substr(j + 1, 2) === '--';
-          if (isSpecialComment) {
-            expr = EXPR_SPECIAL_COMMENT
-            j += 2;
-          } else {
-            expr = EXPR_COMMENT
-          }
-
-          commit('');
+          expr = EXPR_COMMENT;
         } else if (!buffer && char === '#') {
           // First `#` after opening expression `{{`.
           // [1] is reserved for `if`, [2] for `else`.
@@ -120,7 +120,7 @@ export const build = function(statics) {
           mode = MODE_EXPR_SET;
         } else if (char === '/') {
           if (current[0][3]) { // autoclose
-            str = '}}{{/' + str.slice(j + 1);
+            str = `}}{{/${str.substr(j + 1)}`;
             j = -1;
             buffer = '';
           }
@@ -128,8 +128,6 @@ export const build = function(statics) {
           mode = current[0];
           (current = current[0][0]).push(mode, CHILD_RECURSE);
           // mode = MODE_SLASH;
-        } else if (expr == EXPR_COMMENT || expr == EXPR_SPECIAL_COMMENT) {
-          // Ignore comments
         } else {
           buffer += char;
         }
@@ -145,18 +143,24 @@ export const build = function(statics) {
   return current;
 
   function commit(field) {
-    buffer = buffer.replace(/^\s*\n\s*|\s*\n\s*$/g, '');
+    let value;
+    if (field != null) {
+      value = field;
+    } else {
+      buffer = buffer.replace(/^\s*\n\s*|\s*\n\s*$/g, '');
+      if (buffer) value = buffer;
+    }
 
-    if (mode === MODE_TEXT && (field != null || buffer)) {
-      current.push(field || buffer, CHILD_APPEND);
-    } else if (mode >= MODE_EXPR_SET && buffer) {
+    if (mode === MODE_TEXT && value != null) {
+      current.push(value, CHILD_APPEND);
+    } else if (mode >= MODE_EXPR_SET && value != null) {
       if (mode === MODE_EXPR_SET) {
         if (buffer === 'else' || buffer === '^') {
           current = current[0][2];
           expr = EXPR_INVERSE;
           mode = MODE_EXPR_SET;
         } else {
-          current.push(field || buffer, expr);
+          current.push(value, expr);
           mode = MODE_EXPR_APPEND;
         }
       } else {
@@ -164,7 +168,7 @@ export const build = function(statics) {
         // to a function later anyway. Array creation is inevitable.
         current[current.length - 2] = [].concat(
           current[current.length - 2],
-          field || buffer
+          value
         );
         current[current.length - 1] = expr;
       }
@@ -186,7 +190,7 @@ export const evaluate = (h, built, fields, context, options) => {
 
     if (typeof field === 'number') {
       exprs.push(fields[field]);
-    } else if (type === EXPR_VAR || type === EXPR_RAW) {
+    } else if (type === EXPR_VAR || type === EXPR_RAW || type === EXPR_COMMENT) {
       let value;
       if (typeof field === 'string') {
         value = parseVar(field, context, options);
