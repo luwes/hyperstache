@@ -2,8 +2,9 @@ import test from 'tape';
 import htm from 'htm';
 import { compile, registerHelper, escapeExpression, SafeString } from '../src/index.js';
 
+const pass = (...args) => args;
 const h = (tag, props, ...children) => ({ tag, props, children });
-const hh = (args) => htm.apply(h, args);
+const hh = htm.bind(h);
 const hbs = compile.bind(hh);
 
 registerHelper('loud', (str) => str.toUpperCase());
@@ -19,7 +20,7 @@ registerHelper('bold', function(options) {
 
 test('simple expressions', t => {
   t.deepEqual(
-    compile`<div>{{handlebars}}</div>`({ handlebars: 'Hyper&' }),
+    compile.bind(pass)`<div>{{handlebars}}</div>`({ handlebars: 'Hyper&' }),
     [['<div>', '</div>'], 'Hyper&amp;']
   );
   t.deepEqual(

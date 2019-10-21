@@ -245,5 +245,5 @@ export const evaluate = (h, built, fields, context, options) => {
 
   const args = [statics].concat(exprs);
   // log('ARGS', args);
-  return h(args);
+  return h.apply(null, args);
 };
