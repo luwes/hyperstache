@@ -94,18 +94,17 @@ export const build = function(statics) {
           expr = EXPR_RAW;
         } else if (!buffer && char === '#') {
           // First `#` after opening expression `{{`.
-          // [1] is reserved for `if`, [2] for `else`.
+          // [1] is reserved for `if`, [2] for `else`, [3] for autoclose.
           const block = [current];
           current = block[1] = [block];
           block[2] = [block];
-          block[3] = str[j + 1] === '/' && ++j; // autoclose
+          block[3] = str[j + 1] === '/' && ++j;
           expr = EXPR_BLOCK;
           mode = MODE_EXPR_SET;
         } else if (char === '/') {
           if (current[0][3]) { // autoclose
             str = '}}{{/' + str.slice(j + 1);
             j = -1;
-            buffer = '';
           }
 
           mode = current[0];
