@@ -310,3 +310,15 @@ test('each for arrays', t => {
 
   t.end();
 });
+
+test('template comments', t => {
+  t.deepEqual(
+    hbs`<div>{{! This comment will not show up in the output}}</div>`(),
+    { tag: 'div', props: null, children: [''] }
+  );
+  t.deepEqual(
+    hbs`<div>{{!-- This comment may contain mustaches like }} --}}</div>`(),
+    { tag: 'div', props: null, children: [''] }
+  );
+  t.end();
+});

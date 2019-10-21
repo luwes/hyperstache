@@ -1,6 +1,6 @@
 {
   "name": "hyperstache",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Handlebars to template literals transformer.",
   "main": "dist/hyperstache.js",
   "module": "module/hyperstache.js",
