@@ -12,7 +12,7 @@
   "scripts": {
     "build": "rollup -c --silent && agadoo",
     "watch": "rollup -wc --silent",
-    "test": "nyc tape -r esm test/test.js | tap-spec",
+    "test": "nyc --reporter=lcov --reporter=text-summary tape -r esm test/test.js | tap-spec",
     "test:watch": "chokidar '(src|test)/**/*.js' -c 'yarn test' --initial --silent",
     "coverage": "codecov"
   },
