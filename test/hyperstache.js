@@ -128,7 +128,9 @@ test('block helpers with args', t => {
 
 test('if/else/unless without chaining', t => {
   t.deepEqual(hbs`{{#if truthy}}Hello{{/if}}`({ truthy: 1 }), 'Hello');
+
   t.deepEqual(hbs`{{#if false}}Hello{{else}}Bye{{/if}}`(), 'Bye');
+
   t.deepEqual(hbs`
     {{#unless license}}
       WARNING: This entry does not have a license!
@@ -162,13 +164,19 @@ test('if/else with chaining', t => {
   // no chained variant
   t.deepEqual(hbs`
     {{#if false}}
-      Hello
+      Hello 1
     {{else}}
       {{#if true}}
-        Bye
+        Hello 2
+      {{else}}
+        {{#if false}}
+          Hello 3
+        {{else}}
+          Bye
+        {{/if}}
       {{/if}}
     {{/if}}
-  `(), 'Bye');
+  `(), 'Hello 2');
 
   t.deepEqual(hbs`
     {{#if false}}
@@ -190,6 +198,54 @@ test('if/else with chaining', t => {
     {{/if}}
     99
     `({ truthy: 1 }), ['Bye', '99']);
+
+  t.deepEqual(hbs`
+    {{#if false}}
+      Hello
+    {{else if false}}
+      Hello 2
+    {{else if false}}
+      Hello 3
+    {{else if false}}
+      Hello 4
+    {{else if true}}
+      Hello 5
+    {{else}}
+      Bye
+    {{/if}}
+    `(), 'Hello 5');
+
+  t.deepEqual(hbs`
+    {{#if false}}
+      Hello
+    {{else if false}}
+      Hello 2
+    {{else if false}}
+      Hello 3
+    {{else if false}}
+      Hello 4
+    {{else if false}}
+      Hello 5
+    {{else}}
+      Bye
+    {{/if}}
+    `(), 'Bye');
+
+  t.deepEqual(hbs`
+    {{#if false}}
+      Hello
+    {{else if true}}
+      Hello 2
+    {{else if true}}
+      Hello 3
+    {{else if true}}
+      Hello 4
+    {{else if true}}
+      Hello 5
+    {{else}}
+      Bye
+    {{/if}}
+    `(), 'Hello 2');
 
   t.deepEqual(hbs`
     {{#if false}}
