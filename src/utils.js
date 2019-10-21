@@ -1,6 +1,32 @@
 /* Some code from Handlebars - MIT License - Yehuda Katz */
+import { inspect } from 'util';
 
-export function objectPath(obj, paths) {
+export function log(label, ...args) {
+  console.log(label, ...args.map(a => inspect(a, { depth: 10, colors: true })));
+}
+
+export function isEmpty(value) {
+  if (!value && value !== 0) {
+    return true;
+  } else if (Array.isArray(value) && value.length === 0) {
+    return true;
+  } else {
+    return false;
+  }
+}
+
+export function parseVar(name, context, options) {
+  const data = options && options.data;
+  const value = name[0] === '@' &&
+    (name = name.slice(1)) &&
+    name in data ?
+    data[name] :
+    objectPath(name, context);
+  // log('FIELD', name, value);
+  return value;
+}
+
+export function objectPath(paths, obj) {
   paths = paths.split('.');
   let val = obj;
   let idx = 0;
@@ -19,7 +45,7 @@ export function objectPath(obj, paths) {
   return val;
 }
 
-export function parseArgs(context) {
+export function parseArgs(context, options) {
   return arg => {
     const unwrapped = unwrap(arg, '"') || unwrap(arg, "'");
     if (unwrapped) {
@@ -30,8 +56,8 @@ export function parseArgs(context) {
       arg = false;
     } else if (!isNaN(+arg)) {
       arg = +arg;
-    } else if (context[arg]) {
-      arg = context[arg];
+    } else {
+      arg = parseVar(arg, context, options);
     }
     return arg;
   };
