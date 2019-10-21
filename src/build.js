@@ -122,7 +122,6 @@ export const build = function(statics) {
           if (current[0][3]) { // autoclose
             str = `}}{{/${str.substr(j + 1)}`;
             j = -1;
-            buffer = '';
           }
 
           mode = current[0];
