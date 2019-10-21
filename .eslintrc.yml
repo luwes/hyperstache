@@ -9,3 +9,6 @@ extends:
 parserOptions:
   ecmaVersion: 9
   sourceType: module
+
+rules:
+  no-prototype-builtins: off

@@ -1,7 +1,7 @@
-/* Adapted from HTM - Apache License 2.0 - Jason Miller */
+/* Adapted from HTM - Apache License 2.0 - Jason Miller, Joachim Viide */
 
 import { helpers } from './helpers.js';
-import { escapeExpression, parseArgs, objectPath } from './utils.js';
+import { escapeExpression, parseArgs, parseVar, log } from './utils.js';
 
 // const MODE_SLASH = 0;
 const MODE_TEXT = 1;
@@ -14,8 +14,9 @@ const CHILD_RECURSE = 2;
 const EXPR_VAR = 3;
 const EXPR_RAW = 4;
 const EXPR_BLOCK = 5;
-const EXPR_COMMENT = 6;
-const EXPR_SPECIAL_COMMENT = 7;
+const EXPR_INVERSE = 6;
+const EXPR_COMMENT = 7;
+const EXPR_SPECIAL_COMMENT = 8;
 
 export const build = function(statics) {
   let str;
@@ -28,7 +29,7 @@ export const build = function(statics) {
   let char;
   let charHead; // current + next char
 
-  // console.log('STATICS', statics);
+  // log('STATICS', statics);
   for (let i = 0; i < statics.length; i++) {
     // This can be a SafeString obj, convert to string.
     str = '' + statics[i];
@@ -81,10 +82,19 @@ export const build = function(statics) {
         j++;
       } else if (MODE_EXPR_APPEND) {
         if (char === ' ' || char === '\t' || char === '\n' || char === '\r') {
-          // Only commit if there is buffer, ignore spaces after `{{` unless
-          // it's a comment.
-          if (buffer && expr !== EXPR_COMMENT && expr !== EXPR_SPECIAL_COMMENT) {
-            commit();
+          if (expr === EXPR_INVERSE) {
+            // Add `else` chaining.
+            // e.g. transforms {{else if }} into {{else}}{{#/if }}
+            str = '{{#/' + buffer + str.slice(j); // {{#/ autoclose
+            mode = MODE_TEXT;
+            j = -1;
+            buffer = '';
+          } else {
+            // Only commit if there is buffer, ignore spaces after `{{` unless
+            // it's a comment.
+            if (buffer && expr !== EXPR_COMMENT && expr !== EXPR_SPECIAL_COMMENT) {
+              commit();
+            }
           }
         } else if (expr !== EXPR_SPECIAL_COMMENT && ((!buffer && char === '{') || char === '}')) {
           // First `{` after opening expression `{{`.
@@ -101,12 +111,22 @@ export const build = function(statics) {
           commit('');
         } else if (!buffer && char === '#') {
           // First `#` after opening expression `{{`.
-          current = [current];
+          // [1] is reserved for `if`, [2] for `else`.
+          const block = [current];
+          current = block[1] = [block];
+          block[2] = [block];
+          block[3] = str[j + 1] === '/' && ++j; // autoclose
           expr = EXPR_BLOCK;
           mode = MODE_EXPR_SET;
         } else if (char === '/') {
-          mode = current;
-          (current = current[0]).push(mode, CHILD_RECURSE);
+          if (current[0][3]) { // autoclose
+            str = '}}{{/' + str.slice(j + 1);
+            j = -1;
+            buffer = '';
+          }
+
+          mode = current[0];
+          (current = current[0][0]).push(mode, CHILD_RECURSE);
           // mode = MODE_SLASH;
         } else if (expr == EXPR_COMMENT || expr == EXPR_SPECIAL_COMMENT) {
           // Ignore comments
@@ -131,8 +151,14 @@ export const build = function(statics) {
       current.push(field || buffer, CHILD_APPEND);
     } else if (mode >= MODE_EXPR_SET && buffer) {
       if (mode === MODE_EXPR_SET) {
-        current.push(field || buffer, expr);
-        mode = MODE_EXPR_APPEND;
+        if (buffer === 'else' || buffer === '^') {
+          current = current[0][2];
+          expr = EXPR_INVERSE;
+          mode = MODE_EXPR_SET;
+        } else {
+          current.push(field || buffer, expr);
+          mode = MODE_EXPR_APPEND;
+        }
       } else {
         // Merge expression args in an array, they have to be applied
         // to a function later anyway. Array creation is inevitable.
@@ -149,13 +175,13 @@ export const build = function(statics) {
   }
 };
 
-export const evaluate = (h, built, fields, context) => {
+export const evaluate = (h, built, fields, context, options) => {
   const statics = [];
   const exprs = [];
-  // console.log('BUILT', built);
+  // log('BUILT', built);
   for (let i = 1; i < built.length; i++) {
     const field = built[i];
-    // console.log('FIELD', field);
+    // log('FIELD', field);
     const type = built[++i];
 
     if (typeof field === 'number') {
@@ -163,16 +189,19 @@ export const evaluate = (h, built, fields, context) => {
     } else if (type === EXPR_VAR || type === EXPR_RAW) {
       let value;
       if (typeof field === 'string') {
-        value = objectPath(context, field);
+        value = parseVar(field, context, options);
       } else {
         // field === Array
         const fnName = field.shift();
         if (helpers[fnName]) {
-          value = helpers[fnName].apply(context, field.map(parseArgs(context)));
+          value = helpers[fnName].apply(
+            context,
+            field.map(parseArgs(context, options))
+          );
         }
       }
-      // console.log('VALUE', value);
-      if (value) {
+      // log('VALUE', value);
+      if (value != null) {
         if (type === EXPR_VAR && typeof value === 'string') {
           value = escapeExpression(value);
         }
@@ -183,26 +212,44 @@ export const evaluate = (h, built, fields, context) => {
       }
     } else if (type === CHILD_RECURSE) {
       // type === CHILD_RECURSE
-      // field = [ [Circular], 'bold', 5, 'body', 3 ]
-      const [fields] = field.splice(1, 2);
-      // `fields` can be a function name or array of expression instructions.
-      let args = [].concat(fields);
+      /**
+       * field = [
+       *   [Circular],
+       *   [[Circular], [ 'if', '@first' ], 5, 'body', 3],          // if block
+       *   [[Circular], [ 'if', '@last' ], 5, 'body', 3, 'End', 1]  // else block
+       *  ]
+       */
+
+      // Can be a function name or array of expression instructions.
+      let args = [].concat(field[1][1]);
       const fnName = args.shift();
       if (helpers[fnName]) {
         const results = [];
-        const fn = ctx => {
+        const block = ifOrElse => (ctx, options) => {
           // Handlebar helpers expect string operations but `evaluate`
           // returns arrays. Save these arrays in the context `results`, make
           // the helper return a template and fill the var expressions later.
-          const count = results.push(evaluate(h, field, fields, ctx));
+          const count = results.push(
+            evaluate(h, ifOrElse, fields, ctx, options)
+          );
           return `{{{${count - 1}}}}`;
         };
 
-        args = args.map(parseArgs(context));
-        args.push({ fn });
+        // log('ARGUMENTS', args, context);
+        args = args.map(parseArgs(context, options));
+        args.push({
+          // Discard block expression and expression type. Array elements 2 and 3.
+          // Nullify parent array, not needed anymore.
+          fn: block([0].concat(field[1].slice(3))),
+          // No discard for the else block.
+          inverse: block(field[2]),
+          data: {},
+          hash: {}
+        });
 
         const template = helpers[fnName].apply(context, args);
-        // console.log('RESULTS', results);
+        // log('TEMPLATE', template);
+        // log('RESULTS', results);
         const result = evaluate(h, build([template]), [], results);
         exprs.push(result);
       } else {
@@ -216,6 +263,6 @@ export const evaluate = (h, built, fields, context) => {
   }
 
   const args = [statics].concat(exprs);
-  console.log('ARGS', args);
-  return h(args);
+  // log('ARGS', args);
+  return h.apply(null, args);
 };

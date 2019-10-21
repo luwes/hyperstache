@@ -1,5 +1,6 @@
 /* eslint-env node */
 import nodeResolve from 'rollup-plugin-node-resolve';
+import builtins from 'rollup-plugin-node-builtins';
 import babel from 'rollup-plugin-babel';
 import { terser } from 'rollup-plugin-terser';
 import bundleSize from 'rollup-plugin-size';
@@ -17,7 +18,10 @@ const config = {
   },
   plugins: [
     bundleSize(),
-    nodeResolve()
+    nodeResolve({
+      preferBuiltins: true
+    }),
+    builtins()
   ]
 };
 
