@@ -22,7 +22,7 @@
 - [x] built-in helpers: `if`, `unless`, `each`, `with`
 - [ ] helper hash arguments
 - [ ] helper block parameters
-- [ ] comments `{{!comment}}`
+- [x] comments `{{!comment}}`, `{{!-- comment with }} --}}`
 - [ ] partials `{{>partial}}`
 
 ## Usage
