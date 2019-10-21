@@ -4,6 +4,7 @@ import builtins from 'rollup-plugin-node-builtins';
 import babel from 'rollup-plugin-babel';
 import { terser } from 'rollup-plugin-terser';
 import bundleSize from 'rollup-plugin-size';
+import replace from 'rollup-plugin-replace';
 
 const env = process.env.NODE_ENV;
 const config = {
@@ -25,6 +26,30 @@ const config = {
   ]
 };
 
+const umdPlugins = [
+  babel(),
+  terser({
+    sourcemap: true,
+    warnings: true,
+    compress: {
+      passes: 10
+    },
+    mangle: {
+      properties: {
+        regex: /^_/
+      }
+    },
+    nameCache: {
+      props: {
+        cname: 6,
+        props: {
+          // $_tag: '__t',
+        }
+      }
+    }
+  })
+];
+
 export default [
   {
     ...config,
@@ -43,27 +68,38 @@ export default [
     },
     plugins: [
       ...config.plugins,
-      babel(),
-      terser({
-        sourcemap: true,
-        warnings: true,
-        compress: {
-          passes: 10
-        },
-        mangle: {
-          properties: {
-            regex: /^_/
-          }
-        },
-        nameCache: {
-          props: {
-            cname: 6,
-            props: {
-              // $_tag: '__t',
-            }
-          }
-        }
+      ...umdPlugins
+    ]
+  },
+  {
+    ...config,
+    output: {
+      ...config.output,
+      file: 'module/mini.js',
+      format: 'es'
+    },
+    plugins: [
+      ...config.plugins,
+      replace({
+        delimiters: ['', ''],
+        'export const MINI = false;': 'export const MINI = true;'
       })
+    ]
+  },
+  {
+    ...config,
+    output: {
+      ...config.output,
+      file: 'dist/mini.js',
+      format: 'umd'
+    },
+    plugins: [
+      ...config.plugins,
+      replace({
+        delimiters: ['', ''],
+        'export const MINI = false;': 'export const MINI = true;'
+      }),
+      ...umdPlugins
     ]
   }
 ];

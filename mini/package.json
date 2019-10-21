@@ -1,0 +1,8 @@
+{
+  "name": "hyperstache-mini",
+  "private": true,
+  "version": "0.0.1",
+  "description": "Hyperstache mini",
+  "module": "../module/mini.js",
+  "main": "../dist/mini.js"
+}

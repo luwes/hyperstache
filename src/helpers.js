@@ -1,8 +1,8 @@
 /* Adapted code from Handlebars - MIT License - Yehuda Katz */
-
+import { MINI } from './constants.js';
 import { isEmpty } from './utils.js';
 
-export const helpers = {
+export const helpers = MINI ? {} : {
   with: withHelper,
   if: ifHelper,
   unless: unlessHelper,

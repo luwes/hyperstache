@@ -7,7 +7,8 @@
   "files": [
     "module",
     "dist",
-    "src"
+    "src",
+    "mini"
   ],
   "scripts": {
     "build": "rollup -c --silent && agadoo",
@@ -37,6 +38,7 @@
     "rollup-plugin-babel": "^4.3.3",
     "rollup-plugin-node-builtins": "^2.1.2",
     "rollup-plugin-node-resolve": "^5.2.0",
+    "rollup-plugin-replace": "^2.2.0",
     "rollup-plugin-size": "^0.2.0",
     "rollup-plugin-terser": "^5.1.2",
     "tap-spec": "^5.0.0",
