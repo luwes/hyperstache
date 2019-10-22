@@ -30,8 +30,55 @@
 ```js
 import { compile } from 'hyperstache';
 
-const template = compile`<div>{{handlebars}}</div>`;
+const o = (...args) => args;
+const template = compile.bind(o)`<div>{{handlebars}}</div>`;
 console.log(template({ handlebars: 'Hyper&' })); 
 
 // => [['<div>', '</div>'], 'Hyper&amp;']
 ```
+
+## API
+
+`compile(statics, ...exprs)`
+
+`registerHelper(name, fn)`
+
+`escapeExpression(str)`
+
+`new SafeString(htmlStr)`
+
+## Real world ([CodeSandbox](https://codesandbox.io/s/serene-feather-ridlp))
+
+```js
+import { html, observable } from "sinuous";
+import { compile } from "hyperstache";
+
+const literal = `Placed in the middle y'all`;
+const counter = observable(0);
+
+const hbs = compile.bind(html);
+const template = hbs`
+  {{#each comments}}
+  <div class="comment{{@index}}">
+    <h2>
+      {{subject}} 
+      {{#if @first}},{{/if}} 
+      {{#if @last}}!{{/if}} 
+      <span> {{counter}}</span>
+    </h2>
+    ${literal}
+    {{{body}}}
+  </div>
+  {{/each}}
+`;
+const el = template({
+  comments: [
+    { subject: "Hello", body: hbs`<p>World</p>`(), counter },
+    { subject: "Handle", body: hbs`<p>Bars</p>`(), counter },
+    { subject: "You", body: hbs`<p>will pass!</p>`(), counter }
+  ]
+});
+document.body.append(el);
+setInterval(() => counter(counter() + 1), 1000);
+```
+
