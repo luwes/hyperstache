@@ -26,14 +26,35 @@ export function isEmpty(value) {
   }
 }
 
-export function parseVar(name, context, data) {
-  const value = name[0] === '@' &&
-    (name = name.slice(1)) &&
-    name in data ?
-    data[name] :
-    objectPath(name, context);
-  // log('FIELD', name, value);
+export function parseLiteral(value) {
+  if (!isNaN(+value)) {
+    value = +value;
+  } else if (value === 'true') {
+    value = true;
+  } else if (value === 'false') {
+    value = false;
+  } else if (value === 'null') {
+    value = null;
+  } else if (value === 'undefined') {
+    value = undefined;
+  }
   return value;
+}
+
+export function parseVar(context, data) {
+  return name => {
+    if (typeof name === 'string') {
+      const unwrapped = unwrap(name, '"') || unwrap(name, "'");
+      if (unwrapped) {
+        name = unwrapped;
+      } else if (name[0] === '@' && (name = name.slice(1)) && name in data) {
+        name = data[name];
+      } else {
+        name = objectPath(name, context)
+      }
+    }
+    return name;
+  }
 }
 
 export function objectPath(paths, obj) {
@@ -53,24 +74,6 @@ export function objectPath(paths, obj) {
     idx++;
   }
   return val;
-}
-
-export function parseArgs(context, data) {
-  return arg => {
-    const unwrapped = unwrap(arg, '"') || unwrap(arg, "'");
-    if (unwrapped) {
-      arg = unwrapped;
-    } else if (arg === 'true') {
-      arg = true;
-    } else if (arg === 'false') {
-      arg = false;
-    } else if (!isNaN(+arg)) {
-      arg = +arg;
-    } else {
-      arg = parseVar(arg, context, data);
-    }
-    return arg;
-  };
 }
 
 export function unwrap(str, adfix) {
