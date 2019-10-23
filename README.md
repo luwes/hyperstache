@@ -20,7 +20,7 @@
 - [ ] subexpressions
 - [x] basic block helpers `{{#bold}}`
 - [x] built-in helpers: `if`, `unless`, `each`, `with`
-- [ ] helper hash arguments
+- [x] helper hash arguments
 - [ ] helper block parameters
 - [x] comments `{{!comment}}`, `{{!-- comment with }} --}}`
 - [ ] partials `{{>partial}}`

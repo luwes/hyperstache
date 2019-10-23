@@ -17,6 +17,8 @@ registerHelper('bold', function(options) {
     '<b>' + escapeExpression(options.fn(this)) + '</b>'
   );
 });
+registerHelper('mul', options => options.hash.a * options.hash.b);
+registerHelper('pass', options => options.hash.value);
 
 test('simple expressions', t => {
   t.deepEqual(
@@ -36,7 +38,7 @@ test('simple expressions', t => {
     { tag: 'div', props: null, children: ['Hyper', ' ', 'Handle it'] }
   );
   t.deepEqual(
-    hbs`<div>{{mustache}} {{noop}}</div>`({ mustache: 'Hyper' }),
+    hbs`<div>{{mustache}} {{nooper}}</div>`({ mustache: 'Hyper' }),
     { tag: 'div', props: null, children: ['Hyper', ' ', ''] }
   );
   t.deepEqual(
@@ -350,5 +352,15 @@ test('@data variables', t => {
     hbs`<div>{{@root}}</div>`(ctx).children[0],
     ctx
   );
+  t.end();
+});
+
+test('hash params', t => {
+  t.deepEqual(hbs` {{mul a=8 b=20}}`(), [' ', 160]);
+  t.deepEqual(hbs`{{pass value=33}}`(), 33);
+  t.deepEqual(hbs`{{pass value=true}}`(), true);
+  t.deepEqual(hbs`{{pass value=false}}`(), false);
+  t.deepEqual(hbs`{{pass value=null}}`(), '');
+  t.deepEqual(hbs`{{pass value=undefined}}`(), '');
   t.end();
 });
