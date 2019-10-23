@@ -5,6 +5,17 @@ export function log(label, ...args) {
   console.log(label, ...args.map(a => inspect(a, { depth: 10, colors: true })));
 }
 
+export function extend(obj, props) {
+  for (let i in props) obj[i] = props[i];
+  return obj;
+}
+
+export function createFrame(object) {
+  let frame = extend({}, object);
+  frame._parent = object;
+  return frame;
+}
+
 export function isEmpty(value) {
   if (!value && value !== 0) {
     return true;
@@ -15,8 +26,7 @@ export function isEmpty(value) {
   }
 }
 
-export function parseVar(name, context, options) {
-  const data = options && options.data;
+export function parseVar(name, context, data) {
   const value = name[0] === '@' &&
     (name = name.slice(1)) &&
     name in data ?
@@ -45,7 +55,7 @@ export function objectPath(paths, obj) {
   return val;
 }
 
-export function parseArgs(context, options) {
+export function parseArgs(context, data) {
   return arg => {
     const unwrapped = unwrap(arg, '"') || unwrap(arg, "'");
     if (unwrapped) {
@@ -57,7 +67,7 @@ export function parseArgs(context, options) {
     } else if (!isNaN(+arg)) {
       arg = +arg;
     } else {
-      arg = parseVar(arg, context, options);
+      arg = parseVar(arg, context, data);
     }
     return arg;
   };

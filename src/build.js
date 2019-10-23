@@ -1,7 +1,7 @@
 /* Adapted from HTM - Apache License 2.0 - Jason Miller, Joachim Viide */
 
 import { helpers } from './helpers.js';
-import { escapeExpression, parseArgs, parseVar, log } from './utils.js';
+import { escapeExpression, parseArgs, parseVar, extend, log } from './utils.js';
 
 // const MODE_SLASH = 0;
 const MODE_TEXT = 1;
@@ -10,12 +10,12 @@ const MODE_EXPR_SET = 3;
 const MODE_EXPR_APPEND = 4;
 
 const CHILD_APPEND = 0;
-const CHILD_RECURSE = 2;
-const EXPR_VAR = 3;
-const EXPR_RAW = 4;
-const EXPR_BLOCK = 5;
-const EXPR_INVERSE = 6;
-const EXPR_COMMENT = 7;
+const CHILD_RECURSE = 1;
+const EXPR_INVERSE = 2;
+const EXPR_BLOCK = 3;
+const EXPR_VAR = 4;
+const EXPR_RAW = 5;
+const EXPR_COMMENT = 6;
 
 export const build = function(statics) {
   let str;
@@ -159,17 +159,12 @@ export const build = function(statics) {
           expr = EXPR_INVERSE;
           mode = MODE_EXPR_SET;
         } else {
-          current.push(value, expr);
+          current.push(value, expr, []);
           mode = MODE_EXPR_APPEND;
         }
       } else {
-        // Merge expression args in an array, they have to be applied
-        // to a function later anyway. Array creation is inevitable.
-        current[current.length - 2] = [].concat(
-          current[current.length - 2],
-          value
-        );
-        current[current.length - 1] = expr;
+        current[current.length - 1].push(value);
+        current[current.length - 2] = expr;
       }
     }
 
@@ -179,6 +174,10 @@ export const build = function(statics) {
 };
 
 export const evaluate = (h, built, fields, context, options) => {
+  options = options || {
+    data: { root: context }
+  };
+
   const statics = [];
   const exprs = [];
   // log('BUILT', built);
@@ -189,17 +188,16 @@ export const evaluate = (h, built, fields, context, options) => {
 
     if (typeof field === 'number') {
       exprs.push(fields[field]);
-    } else if (type === EXPR_VAR || type === EXPR_RAW || type === EXPR_COMMENT) {
+    } else if (type >= EXPR_VAR) {
+      const args = built[++i];
       let value;
-      if (typeof field === 'string') {
-        value = parseVar(field, context, options);
+      if (!args.length) {
+        value = parseVar(field, context, options.data);
       } else {
-        // field === Array
-        const fnName = field.shift();
-        if (helpers[fnName]) {
-          value = helpers[fnName].apply(
+        if (helpers[field]) {
+          value = helpers[field].apply(
             context,
-            field.map(parseArgs(context, options))
+            args.map(parseArgs(context, options.data))
           );
         }
       }
@@ -214,18 +212,14 @@ export const evaluate = (h, built, fields, context, options) => {
         exprs.push('');
       }
     } else if (type === CHILD_RECURSE) {
-      // type === CHILD_RECURSE
       /**
        * field = [
        *   [Circular],
-       *   [[Circular], [ 'if', '@first' ], 5, 'body', 3],          // if block
-       *   [[Circular], [ 'if', '@last' ], 5, 'body', 3, 'End', 1]  // else block
+       *   [[Circular], if, 5, [ '@first' ], 'body', 3],          // if block
+       *   [[Circular], if, 5, [ '@last' ], 'body', 3, 'End', 1]  // else block
        *  ]
        */
-
-      // Can be a function name or array of expression instructions.
-      let args = [].concat(field[1][1]);
-      const fnName = args.shift();
+      const fnName = field[1][1];
       if (helpers[fnName]) {
         const results = [];
         const block = ifOrElse => (ctx, options) => {
@@ -239,14 +233,14 @@ export const evaluate = (h, built, fields, context, options) => {
         };
 
         // log('ARGUMENTS', args, context);
-        args = args.map(parseArgs(context, options));
+        const args = field[1][3].map(parseArgs(context, options.data));
         args.push({
-          // Discard block expression and expression type. Array elements 2 and 3.
+          // Discard block expression and expression type.
           // Nullify parent array, not needed anymore.
-          fn: block([0].concat(field[1].slice(3))),
+          fn: block([0].concat(field[1].slice(4))),
           // No discard for the else block.
           inverse: block(field[2]),
-          data: {},
+          data: options.data,
           hash: {}
         });
 

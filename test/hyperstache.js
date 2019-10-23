@@ -259,7 +259,8 @@ test('if/else with chaining', t => {
   t.end();
 });
 
-test('each for arrays', t => {
+test('each', t => {
+  // iterate over arrays
   t.deepEqual(hbs`
     {{#each comments}}
       <div class="comment{{@index}}">
@@ -308,6 +309,17 @@ test('each for arrays', t => {
   `({ comments: [] }), 'no dice'
   );
 
+  // iterate over objects
+  t.deepEqual(hbs`
+    <ul>{{#each list}}<li>{{name}}</li>{{else}}no dice{{/each}}</ul>
+  `({ list: {
+      item1: { name: 'John' },
+      item2: { name: 'Frank' }
+    } }), { tag: 'ul', props: null, children: [ [
+      { tag: 'li', props: null, children: [ 'John' ] },
+      { tag: 'li', props: null, children: [ 'Frank' ] } ] ] }
+  );
+
   t.end();
 });
 
@@ -319,6 +331,24 @@ test('template comments', t => {
   t.deepEqual(
     hbs`<div>{{!-- This comment may contain mustaches like }} --}}</div>`(),
     { tag: 'div', props: null, children: [''] }
+  );
+  t.deepEqual(
+    hbs`
+      <div>
+        {{!-- This comment may contain mustaches like }} --}}
+        {{fruit}}
+      </div>
+    `({ fruit: 'Banana' }),
+    { tag: 'div', props: null, children: ['', 'Banana'] }
+  );
+  t.end();
+});
+
+test('@data variables', t => {
+  const ctx = {};
+  t.equals(
+    hbs`<div>{{@root}}</div>`(ctx).children[0],
+    ctx
   );
   t.end();
 });

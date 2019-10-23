@@ -1,6 +1,6 @@
 /* Adapted code from Handlebars - MIT License - Yehuda Katz */
 import { MINI } from './constants.js';
-import { isEmpty } from './utils.js';
+import { isEmpty, createFrame } from './utils.js';
 
 export const helpers = MINI ? {} : {
   with: withHelper,
@@ -46,9 +46,13 @@ function unlessHelper(conditional, options) {
 function eachHelper(context, options) {
   let i = 0,
     ret = '',
-    data = options.data;
+    data;
 
   if (typeof context === 'function') { context = context.call(this); }
+
+  if (options.data) {
+    data = createFrame(options.data);
+  }
 
   function execIteration(field, index, last) {
     if (data) {
