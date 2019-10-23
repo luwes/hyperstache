@@ -25,16 +25,58 @@
 - [x] comments `{{!comment}}`, `{{!-- comment with }} --}}`
 - [ ] partials `{{>partial}}`
 
-## Usage
+## Usage ([CodeSandbox](https://codesandbox.io/s/boring-breeze-y3od0))
 
 ```js
-import { compile } from 'hyperstache';
+import { compile } from "hyperstache";
 
 const o = (...args) => args;
-const template = compile.bind(o)`<div>{{handlebars}}</div>`;
-console.log(template({ handlebars: 'Hyper&' })); 
+const template = compile.bind(o)`
+  <p>
+    Hello, my name is {{name}}. 
+    I am from {{hometown}}. I have {{kids.length}} kids:
+  </p>
+  <ul>
+    {{#each kids}}
+      <li>{{name}} is {{age}}</li>
+    {{/kids}}
+  </ul>
+`;
 
-// => [['<div>', '</div>'], 'Hyper&amp;']
+const data = {
+  name: "Alan",
+  hometown: "Somewhere, TX",
+  kids: [{ name: "Jimmy", age: "12" }, { name: "Sally", age: "4" }]
+};
+console.log(template(data));
+
+/** =>
+[
+  [
+    "<p>↵    Hello, my name is ",
+    ". ↵    I am from ",
+    ". I have ",
+    " kids:↵  </p>↵  <ul>",
+    "</ul>"
+  ],
+  "Alan",
+  "Somewhere, TX",
+  2,
+  [
+    ["", "", ""],
+    [
+      ["<li>", " is ", "</li>"],
+      "Jimmy",
+      "12"
+    ],
+    [
+      ["<li>", " is ", "</li>"],
+      "Sally",
+      "4"
+    ]
+  ]
+]
+ */
 ```
 
 ## API
@@ -47,38 +89,30 @@ console.log(template({ handlebars: 'Hyper&' }));
 
 `new SafeString(htmlStr)`
 
-## Real world ([CodeSandbox](https://codesandbox.io/s/serene-feather-ridlp))
+## Real world ([CodeSandbox](https://codesandbox.io/s/damp-wave-5j4u9))
 
 ```js
-import { html, observable } from "sinuous";
+import { html } from "sinuous";
 import { compile } from "hyperstache";
 
-const literal = `Placed in the middle y'all`;
-const counter = observable(0);
-
-const hbs = compile.bind(html);
-const template = hbs`
-  {{#each comments}}
-  <div class="comment{{@index}}">
-    <h2>
-      {{subject}} 
-      {{#if @first}},{{/if}} 
-      {{#if @last}}!{{/if}} 
-      <span> {{counter}}</span>
-    </h2>
-    ${literal}
-    {{{body}}}
-  </div>
-  {{/each}}
+const template = compile.bind(html)`
+  <p>
+    Hello, my name is {{name}}. 
+    I am from {{hometown}}. I have {{kids.length}} kids:
+  </p>
+  <ul>
+    {{#each kids}}
+      <li>{{name}} is {{age}}</li>
+    {{/kids}}
+  </ul>
 `;
-const el = template({
-  comments: [
-    { subject: "Hello", body: hbs`<p>World</p>`(), counter },
-    { subject: "Handle", body: hbs`<p>Bars</p>`(), counter },
-    { subject: "You", body: hbs`<p>will pass!</p>`(), counter }
-  ]
-});
-document.body.append(el);
-setInterval(() => counter(counter() + 1), 1000);
+
+const data = {
+  name: "Alan",
+  hometown: "Somewhere, TX",
+  kids: [{ name: "Jimmy", age: "12" }, { name: "Sally", age: "4" }]
+};
+const dom = template(data);
+document.body.append(dom);
 ```
 
