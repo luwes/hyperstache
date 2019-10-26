@@ -15,13 +15,9 @@ export function expr(field, context, options) {
   options = options || {};
   options.data = options.data || { root: context };
 
-  let value;
-  if (helpers[field]) {
-    value = block(field, context, options);
-  } else {
-    value = parseVar(context, options.data)(field);
-  }
-  return value;
+  return helpers[field]
+    ? block(field, context, options)
+    : parseVar(context, options.data)(field);
 }
 
 export function block(field, context, options) {
@@ -31,16 +27,14 @@ export function block(field, context, options) {
   options.hash = options.hash || {};
   options.inverse = options.inverse || (() => '');
 
-  let value;
-  if (helpers[field]) {
-    value = helpers[field].apply(
-      context,
-      options.params.map(parseVar(context, options.data)).concat(options)
-    );
-  } else {
-    value = '';
-  }
-  return value;
+  return helpers[field]
+    ? helpers[field].apply(
+        context,
+        options.params
+          .map(parseVar(context, options.data))
+          .concat(options)
+      )
+    : '';
 }
 
 export function registerHelper(name, fn) {

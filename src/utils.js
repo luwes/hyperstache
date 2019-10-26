@@ -57,9 +57,8 @@ export function parseVar(context, data) {
   };
 }
 
-export function objectPath(paths, obj) {
+export function objectPath(paths, val) {
   paths = paths.split('.');
-  let val = obj;
   let idx = 0;
   while (idx < paths.length) {
     if (val == null) {
@@ -94,9 +93,6 @@ const escape = {
   '=': '&#x3D;'
 };
 
-const badChars = /[&<>"'`=]/g,
-  possible = /[&<>"'`=]/;
-
 function escapeChar(chr) {
   return escape[chr];
 }
@@ -105,7 +101,7 @@ function escapeChar(chr) {
  * Escape an expression, aka make HTML characters safe.
  *
  * This is different from Handlebars because some expressions are better left
- * in its original type for further processing. Numbers, objects, booleans.
+ * in its original type for further processing.
  *
  * @param  {*} string
  * @return {*}
@@ -113,30 +109,16 @@ function escapeChar(chr) {
 export function escapeExpression(string) {
   if (string == null) return '';
 
+  // don't escape SafeStrings, since they're already safe
   if (string && string.toHTML) {
     return string.toHTML();
   }
 
-  const type = typeof string;
-  if (type === 'number' || type === 'boolean' || type === 'object') {
+  if (typeof string !== 'string') {
     return string;
   }
 
-  if (type !== 'string') {
-    // don't escape SafeStrings, since they're already safe
-    if (!string) {
-      return string + '';
-    }
-    // Force a string conversion as this will be done by the append regardless and
-    // the regex test will do this transparently behind the scenes, causing issues if
-    // an object's to string has escaped characters in it.
-    string = '' + string;
-  }
-
-  if (!possible.test(string)) {
-    return string;
-  }
-  return string.replace(badChars, escapeChar);
+  return string.replace(/[&<>"'`=]/g, escapeChar);
 }
 
 // Build out our basic SafeString type
