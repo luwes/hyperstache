@@ -11,18 +11,26 @@
 **cdn**: https://unpkg.com/hyperstache  
 **module**: https://unpkg.com/hyperstache?module
 
+## `hyperstache` by the numbers:
+
+🚙 **<2kB** when used directly in the browser
+
+🏍 **1.5kB** `hyperstache/mini` version
+
+🏎 **1kB** if compiled using [babel-plugin-hyperstache](./packages/babel-plugin-hyperstache)
+
 ## Features
 
 - [x] variables `{{escaped}}`, `{{{unescaped}}}`
 - [x] variables dot notation `{{obj.prop}}`
 - [x] helpers `{{loud lastname}}`
 - [x] helpers literal arguments: `numbers`, `strings`, `true`, `false`, `null` and `undefined`
-- [ ] subexpressions
 - [x] basic block helpers `{{#bold}}`
 - [x] built-in helpers: `if`, `unless`, `each`, `with`
 - [x] helper hash arguments
-- [ ] helper block parameters
 - [x] comments `{{!comment}}`, `{{!-- comment with }} --}}`
+- [ ] helper block parameters
+- [ ] subexpressions
 - [ ] partials `{{>partial}}`
 
 ## Usage ([CodeSandbox](https://codesandbox.io/s/boring-breeze-y3od0))
