@@ -2,6 +2,12 @@
 
 This project adheres to [Semantic Versioning](http://semver.org/).
 
+## 0.4.0 - 2019-10-25
+
+### Added
+
+- Added babel plugin [#9](https://github.com/luwes/hyperstache/pull/9)
+
 ## 0.3.0 - 2019-10-22
 
 ### Added
