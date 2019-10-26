@@ -1,20 +1,56 @@
 /* Adapted code from Handlebars - MIT License - Yehuda Katz */
 import { MINI } from './constants.js';
-import { isEmpty, createFrame } from './utils.js';
+import { isEmpty, createFrame, parseVar } from './utils.js';
 
-export const helpers = MINI ? {} : {
-  with: withHelper,
-  if: ifHelper,
-  unless: unlessHelper,
-  each: eachHelper
-};
+export const helpers = MINI
+  ? {}
+  : {
+      with: withHelper,
+      if: ifHelper,
+      unless: unlessHelper,
+      each: eachHelper
+    };
+
+export function expr(field, context, options) {
+  options = options || {};
+  options.data = options.data || { root: context };
+
+  let value;
+  if (helpers[field]) {
+    value = block(field, context, options);
+  } else {
+    value = parseVar(context, options.data)(field);
+  }
+  return value;
+}
+
+export function block(field, context, options) {
+  options = options || {};
+  options.data = options.data || { root: context };
+  options.params = options.params || [];
+  options.hash = options.hash || {};
+  options.inverse = options.inverse || (() => '');
+
+  let value;
+  if (helpers[field]) {
+    value = helpers[field].apply(
+      context,
+      options.params.map(parseVar(context, options.data)).concat(options)
+    );
+  } else {
+    value = '';
+  }
+  return value;
+}
 
 export function registerHelper(name, fn) {
   helpers[name] = fn;
 }
 
 function withHelper(context, options) {
-  if (typeof context === 'function') { context = context.call(this); }
+  if (typeof context === 'function') {
+    context = context.call(this);
+  }
 
   return options.fn(context, {
     data: options.data,
@@ -23,7 +59,9 @@ function withHelper(context, options) {
 }
 
 function ifHelper(conditional, options) {
-  if (typeof conditional === 'function') { conditional = conditional.call(this); }
+  if (typeof conditional === 'function') {
+    conditional = conditional.call(this);
+  }
 
   // Default behavior is to render the positive path if the value is truthy and not empty.
   // The `includeZero` option may be set to treat the condtional as purely not empty based on the
@@ -45,10 +83,12 @@ function unlessHelper(conditional, options) {
 
 function eachHelper(context, options) {
   let i = 0,
-    ret = '',
+    ret = [],
     data;
 
-  if (typeof context === 'function') { context = context.call(this); }
+  if (typeof context === 'function') {
+    context = context.call(this);
+  }
 
   if (options.data) {
     data = createFrame(options.data);
@@ -62,12 +102,12 @@ function eachHelper(context, options) {
       data.last = !!last;
     }
 
-    ret =
-      ret +
+    ret.push(
       options.fn(context[field], {
         data: data,
         blockParams: [context[field], field]
-      });
+      })
+    );
   }
 
   if (context && typeof context === 'object') {

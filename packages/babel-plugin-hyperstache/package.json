@@ -1,0 +1,20 @@
+{
+	"name": "babel-plugin-hyperstache",
+	"version": "0.0.1",
+	"description": "Babel plugin to pre-compile handlebars.",
+	"main": "dist/babel-plugin-hyperstache.js",
+	"module": "module/babel-plugin-hyperstache.js",
+	"files": [
+    "module",
+    "dist",
+    "src"
+	],
+	"author": "Wesley Luyten <me@wesleyluyten.com> (https://wesleyluyten.com)",
+	"license": "MIT",
+	"dependencies": {
+		"hyperstache": "^0.3.0"
+	},
+	"devDependencies": {
+		"@babel/core": "^7.6.4"
+	}
+}

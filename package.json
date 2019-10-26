@@ -4,19 +4,20 @@
   "description": "Handlebars to template literals transformer.",
   "main": "dist/hyperstache.js",
   "module": "module/hyperstache.js",
+  "scripts": {
+    "build": "rollup -c --silent",
+    "watch": "rollup -wc --silent",
+    "test": "nyc --reporter=lcov --reporter=text tape -r esm test/test.js | tap-spec",
+    "test:watch": "chokidar '**/(src|test)/**/*.js' -c 'yarn test' --initial --silent",
+    "coverage": "codecov"
+  },
   "files": [
     "module",
     "dist",
     "src",
-    "mini"
+    "mini",
+    "runtime"
   ],
-  "scripts": {
-    "build": "rollup -c --silent && agadoo",
-    "watch": "rollup -wc --silent",
-    "test": "nyc --reporter=lcov --reporter=text tape -r esm test/test.js | tap-spec",
-    "test:watch": "chokidar '(src|test)/**/*.js' -c 'yarn test' --initial --silent",
-    "coverage": "codecov"
-  },
   "author": "Wesley Luyten <me@wesleyluyten.com> (https://wesleyluyten.com)",
   "license": "MIT",
   "devDependencies": {
@@ -24,7 +25,6 @@
     "@babel/plugin-proposal-object-rest-spread": "^7.6.2",
     "@babel/plugin-transform-object-assign": "^7.2.0",
     "@babel/preset-env": "^7.6.2",
-    "agadoo": "^1.1.0",
     "chokidar-cli": "^2.0.0",
     "codecov": "^3.6.1",
     "eslint": "^6.5.1",

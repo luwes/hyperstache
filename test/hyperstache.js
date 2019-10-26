@@ -1,11 +1,10 @@
 import test from 'tape';
 import htm from 'htm';
-import { compile, registerHelper, escapeExpression, SafeString } from '../src/index.js';
+import { compile, registerHelper } from '../src/index.js';
 
-const pass = (...args) => args;
 const h = (tag, props, ...children) => ({ tag, props, children });
-const hh = htm.bind(h);
-const hbs = compile.bind(hh);
+const html = htm.bind(h);
+const hbs = compile.bind(html);
 
 registerHelper('loud', (str) => str.toUpperCase());
 registerHelper('sum', (a, b) => a + b);
@@ -13,18 +12,12 @@ registerHelper('noop', function(options) {
   return options.fn(this)
 });
 registerHelper('bold', function(options) {
-  return new SafeString(
-    '<b>' + escapeExpression(options.fn(this)) + '</b>'
-  );
+  return hbs`<b>${options.fn(this)}</b>`();
 });
 registerHelper('mul', options => options.hash.a * options.hash.b);
 registerHelper('pass', options => options.hash.value);
 
 test('simple expressions', t => {
-  t.deepEqual(
-    compile.bind(pass)`<div>{{handlebars}}</div>`({ handlebars: 'Hyper&' }),
-    [['<div>', '</div>'], 'Hyper&amp;']
-  );
   t.deepEqual(
     hbs`<div>{{mustache}}</div>`({ mustache: 'Hyper&' }),
     { tag: 'div', props: null, children: ['Hyper&amp;'] }

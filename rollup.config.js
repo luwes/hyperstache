@@ -101,5 +101,82 @@ export default [
       }),
       ...umdPlugins
     ]
-  }
+  },
+  {
+    ...config,
+    input: 'src/runtime.js',
+    output: {
+      ...config.output,
+      file: 'module/runtime.js',
+      format: 'es'
+    }
+  },
+  {
+    ...config,
+    input: 'src/runtime.js',
+    output: {
+      ...config.output,
+      file: 'dist/runtime.js',
+      format: 'umd'
+    },
+    plugins: [
+      ...config.plugins,
+      ...umdPlugins
+    ]
+  },
+  {
+    ...config,
+    input: 'src/runtime.js',
+    output: {
+      ...config.output,
+      file: 'module/runtime-mini.js',
+      format: 'es'
+    },
+    plugins: [
+      ...config.plugins,
+      replace({
+        delimiters: ['', ''],
+        'export const MINI = false;': 'export const MINI = true;'
+      })
+    ]
+  },
+  {
+    ...config,
+    input: 'src/runtime.js',
+    output: {
+      ...config.output,
+      file: 'dist/runtime-mini.js',
+      format: 'umd'
+    },
+    plugins: [
+      ...config.plugins,
+      replace({
+        delimiters: ['', ''],
+        'export const MINI = false;': 'export const MINI = true;'
+      }),
+      ...umdPlugins
+    ]
+  },
+  {
+    ...config,
+    input: 'packages/babel-plugin-hyperstache/src/index.js',
+    output: {
+      ...config.output,
+      file: 'packages/babel-plugin-hyperstache/module/babel-plugin-hyperstache.js',
+      format: 'es'
+    }
+  },
+  {
+    ...config,
+    input: 'packages/babel-plugin-hyperstache/src/index.js',
+    output: {
+      ...config.output,
+      file: 'packages/babel-plugin-hyperstache/dist/babel-plugin-hyperstache.js',
+      format: 'umd'
+    },
+    plugins: [
+      ...config.plugins,
+      ...umdPlugins
+    ]
+  },
 ];

@@ -1,0 +1,8 @@
+{
+  "name": "hyperstache-runtime",
+  "private": true,
+  "version": "0.0.1",
+  "description": "Hyperstache runtime",
+  "module": "../module/runtime.js",
+  "main": "../dist/runtime.js"
+}

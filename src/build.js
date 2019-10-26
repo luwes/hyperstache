@@ -1,7 +1,7 @@
 /* Adapted from HTM - Apache License 2.0 - Jason Miller, Joachim Viide */
 
-import { helpers } from './helpers.js';
-import { escapeExpression, parseVar, parseLiteral, log } from './utils.js';
+import { expr, block } from './helpers.js';
+import { escapeExpression, parseLiteral, log } from './utils.js';
 
 // const MODE_SLASH = 0;
 const MODE_TEXT = 1;
@@ -10,10 +10,10 @@ const MODE_EXPR_SET = 3;
 const MODE_EXPR_APPEND = 4;
 
 const CHILD_APPEND = 0;
-const CHILD_RECURSE = 1;
+export const CHILD_RECURSE = 1;
 const EXPR_INVERSE = 2;
 const EXPR_BLOCK = 3;
-const EXPR_VAR = 4;
+export const EXPR_VAR = 4;
 const EXPR_RAW = 5;
 const EXPR_COMMENT = 6;
 
@@ -91,7 +91,12 @@ export const build = function(statics) {
         if (buffer === '--') {
           closeTag = '--}}';
         }
-      } else if (char === ' ' || char === '\t' || char === '\n' || char === '\r') {
+      } else if (
+        char === ' ' ||
+        char === '\t' ||
+        char === '\n' ||
+        char === '\r'
+      ) {
         if (expr === EXPR_INVERSE) {
           // Add `else` chaining.
           // e.g. transforms {{else if }} into {{else}}{{#/if }}
@@ -109,7 +114,7 @@ export const build = function(statics) {
       } else if ((!buffer && char === '{') || char === '}') {
         // First `{` after opening expression `{{`.
         expr = EXPR_RAW;
-      } else if ((!buffer && char === '!')) {
+      } else if (!buffer && char === '!') {
         expr = EXPR_COMMENT;
       } else if (!buffer && char === '#') {
         // First `#` after opening expression `{{`.
@@ -124,7 +129,8 @@ export const build = function(statics) {
         propName = buffer;
         buffer = '';
       } else if (char === '/') {
-        if (current[0][3]) { // autoclose
+        if (current[0][3]) {
+          // autoclose
           str = `}}{{/${str.substr(j + 1)}`;
           j = -1;
         }
@@ -182,11 +188,7 @@ export const build = function(statics) {
   }
 };
 
-export const evaluate = (h, built, fields, context, options) => {
-  options = options || {
-    data: { root: context }
-  };
-
+export const evaluate = (h, built, fields, context, data) => {
   const statics = [];
   const exprs = [];
   // log('BUILT', built);
@@ -198,23 +200,13 @@ export const evaluate = (h, built, fields, context, options) => {
     if (typeof field === 'number') {
       exprs.push(fields[field]);
     } else if (type >= EXPR_VAR) {
-      const args = built[++i];
-      options.hash = built[++i];
-      // log('OPTIONS', options, args);
-
-      let value;
-      if (helpers[field]) {
-        value = helpers[field].apply(
-          context,
-          args
-            .map(parseVar(context, options.data))
-            .concat(options)
-        );
-      } else {
-        value = parseVar(context, options.data)(field);
-      }
-
+      let value = expr(field, context, {
+        params: built[++i],
+        hash: built[++i],
+        data
+      });
       // log('VALUE', value);
+
       if (value != null) {
         if (type === EXPR_VAR && typeof value === 'string') {
           value = escapeExpression(value);
@@ -227,43 +219,27 @@ export const evaluate = (h, built, fields, context, options) => {
     } else if (type === CHILD_RECURSE) {
       /**
        * field = [
-       *   [Circular],
-       *   [[Circular], if, 5, [ '@first' ], {}, 'body', 3],          // if block
-       *   [[Circular], if, 5, [ '@last' ], {}, 'body', 3, 'End', 1]  // else block
+       *   [parent],
+       *   [[parent], if, 5, ['@first'], { hash: param }, 'body', 3], // if block
+       *   [[parent], if, 5, ['@last'], {}, 'body', 3, 'End', 1]      // else block
        *  ]
        */
-      const fnName = field[1][1];
-      if (helpers[fnName]) {
-        const results = [];
-        const block = ifOrElse => (ctx, options) => {
-          // Handlebar helpers expect string operations but `evaluate`
-          // returns arrays. Save these arrays in the context `results`, make
-          // the helper return a template and fill the var expressions later.
-          const count = results.push(
-            evaluate(h, ifOrElse, fields, ctx, options)
-          );
-          return `{{{${count - 1}}}}`;
-        };
+      const makeFun = ifOrElse => (ctx, opts) =>
+        evaluate(h, ifOrElse, fields, ctx, opts && opts.data);
 
-        // log('ARGUMENTS', args, context);
-        const args = field[1][3].map(parseVar(context, options.data));
-        args.push({
-          // Discard block expression and expression type.
-          // Nullify parent array, not needed anymore.
-          fn: block([0].concat(field[1].slice(5))),
-          // No discard for the else block.
-          inverse: block(field[2]),
-          data: options.data,
-          hash: field[1][4]
-        });
+      const value = block(field[1][1], context, {
+        fn: makeFun([0].concat(field[1].slice(5))),
+        inverse: makeFun(field[2]),
+        params: field[1][3],
+        hash: field[1][4],
+        data
+      });
 
-        const template = helpers[fnName].apply(context, args);
-        // log('TEMPLATE', template);
-        // log('RESULTS', results);
-        const result = evaluate(h, build([template]), [], results);
-        exprs.push(result);
+      if (value) {
+        // log('RESULT', value);
+        exprs.push(value);
       } else {
-        // If no helper is found, push an empty string as expression.
+        // If the result is empty, push an empty string as expression.
         exprs.push('');
       }
     } else {
