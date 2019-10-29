@@ -5,13 +5,9 @@ export function log(label, ...args) {
   console.log(label, ...args.map(a => inspect(a, { depth: 10, colors: true })));
 }
 
-export function extend(obj, props) {
-  for (let i in props) obj[i] = props[i];
-  return obj;
-}
-
 export function createFrame(object) {
-  let frame = extend({}, object);
+  let frame = {};
+  for (let i in object) frame[i] = object[i];
   frame._parent = object;
   return frame;
 }
@@ -41,16 +37,28 @@ export function parseLiteral(value) {
   return value;
 }
 
-export function parseVar(context, data) {
+export function lookup(context, options) {
+  const data = options.data;
+  const depths = options.depths;
   return name => {
     if (typeof name === 'string') {
       const unwrapped = unwrap(name, '"') || unwrap(name, "'");
       if (unwrapped) {
-        name = unwrapped;
+        return unwrapped;
       } else if (name[0] === '@' && (name = name.slice(1)) && name in data) {
-        name = data[name];
+        return data[name];
       } else {
-        name = objectPath(name, context);
+        if (name === '.') {
+          return context;
+        } else {
+          const paths = name.split('.');
+          for (let i = 0; i < depths.length; i++) {
+            if (depths[i] && objectPath([paths[0]], depths[i]) != null) {
+              return objectPath(paths, depths[i]);
+            }
+          }
+          return;
+        }
       }
     }
     return name;
@@ -58,7 +66,6 @@ export function parseVar(context, data) {
 }
 
 export function objectPath(paths, val) {
-  paths = paths.split('.');
   let idx = 0;
   while (idx < paths.length) {
     if (val == null) {
@@ -123,9 +130,9 @@ export function escapeExpression(string) {
 
 // Build out our basic SafeString type
 export function SafeString(string) {
-  this.string = string;
+  const toString = () => '' + string;
+  return {
+    toString,
+    toHTML: toString
+  }
 }
-
-SafeString.prototype.toString = SafeString.prototype.toHTML = function() {
-  return '' + this.string;
-};

@@ -1,7 +1,7 @@
 import { build, evaluate } from './build.js';
 
 export { registerHelper, helpers } from './helpers.js';
-export { escapeExpression, SafeString, createFrame } from './utils.js';
+export { escapeExpression, SafeString } from './utils.js';
 
 export function compile(statics) {
   const template = build(statics);
