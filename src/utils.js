@@ -5,13 +5,9 @@ export function log(label, ...args) {
   console.log(label, ...args.map(a => inspect(a, { depth: 10, colors: true })));
 }
 
-export function extend(obj, props) {
-  for (let i in props) obj[i] = props[i];
-  return obj;
-}
-
 export function createFrame(object) {
-  let frame = extend({}, object);
+  let frame = {};
+  for (let i in object) frame[i] = object[i];
   frame._parent = object;
   return frame;
 }
@@ -134,9 +130,9 @@ export function escapeExpression(string) {
 
 // Build out our basic SafeString type
 export function SafeString(string) {
-  this.string = string;
+  const toString = () => '' + string;
+  return {
+    toString,
+    toHTML: toString
+  }
 }
-
-SafeString.prototype.toString = SafeString.prototype.toHTML = function() {
-  return '' + this.string;
-};

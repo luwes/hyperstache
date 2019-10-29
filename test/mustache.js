@@ -22,6 +22,7 @@ _.each(specs, function(name) {
     // Our lambda implementation knowingly deviates from the optional Mustace lambda spec
     // We also do not support alternative delimeters
     if (
+      // Hyperstache has helpers instead
       name === '~lambdas.json' ||
       // Hyperstache doesn't support partials
       name === 'partials.json' ||

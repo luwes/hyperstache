@@ -13,11 +13,11 @@
 
 ## `hyperstache` by the numbers:
 
-🚙 **<2kB** when used directly in the browser
+🚙 **2.15kB** when used directly in the browser
 
-🏍 **1.5kB** `hyperstache/mini` version
+🏍 **1.85kB** `hyperstache/mini` version ~~(built-in helpers)~~
 
-🏎 **1kB** if compiled using [babel-plugin-hyperstache](./packages/babel-plugin-hyperstache)
+🏎 **1.15kB** if compiled using [babel-plugin-hyperstache](./packages/babel-plugin-hyperstache)
 
 ## Features
 
@@ -29,6 +29,7 @@
 - [x] built-in helpers: `if`, `unless`, `each`, `with`
 - [x] helper hash arguments
 - [x] comments `{{!comment}}`, `{{!-- comment with }} --}}`
+- [x] whitespace control `{{~ trimStart }}`
 - [ ] helper block parameters
 - [ ] subexpressions
 - [ ] partials `{{>partial}}`

@@ -2,7 +2,7 @@ import { expr, block } from './helpers.js';
 import { escapeExpression } from './utils.js';
 
 export { registerHelper, helpers } from './helpers.js';
-export { SafeString, createFrame, escapeExpression } from './utils.js';
+export { SafeString, escapeExpression } from './utils.js';
 
 let depths;
 

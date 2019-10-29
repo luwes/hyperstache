@@ -26,17 +26,14 @@ export const build = function(statics) {
   let quote;
   let current = [0];
   let char;
-  let openTag = '{{';
-  let closeTag = '}}';
-  let openSlice;
-  let closeSlice;
+  let closeEnd;
   let propName;
 
-  let line = [current];   // Keeps track of `current` arrays per line.
-  let lines = line;       // Keeps track of all `current` arrays.
-  let hasTag;             // Is there a {{tag}} on the current line?
-  let nonSpace;           // Is there a non-space char on the current line?
-  let isWhiteSpace;       // Is current character a space?
+  let line = [current]; // Keeps track of `current` arrays per line.
+  let lines = line; // Keeps track of all `current` arrays.
+  let hasTag; // Is there a {{tag}} on the current line?
+  let nonSpace; // Is there a non-space char on the current line?
+  let isWhiteSpace; // Is current character a space?
   let skipWhiteSpace;
 
   // log('STATICS', statics);
@@ -56,12 +53,10 @@ export const build = function(statics) {
 
     for (let j = 0; j < str.length; j++) {
       char = str[j];
-      openSlice = str.substr(j, openTag.length);
-      closeSlice = str.substr(j, closeTag.length);
       isWhiteSpace = /\s/.test(char);
 
       if (mode === MODE_TEXT) {
-        if (openSlice === openTag) {
+        if (char === '{' && str[j + 1] === '{') {
           skipWhiteSpace = false;
 
           commit();
@@ -92,31 +87,39 @@ export const build = function(statics) {
 
           expr = undefined;
         }
+      } else if (
+        (!closeEnd || buffer === closeEnd) &&
+        char === '}' &&
+        str[j + 1] === '}' &&
+        str[j + 2] !== '}'
+      ) {
+        if (expr === EXPR_VAR) {
+          nonSpace = true;
+        }
+
+        if (expr === EXPR_COMMENT) {
+          commit('');
+        } else {
+          commit();
+        }
+
+        closeEnd = false;
+        mode = MODE_TEXT;
+        j++;
+      } else if (expr === EXPR_COMMENT) {
+        // Just keep track of 2 characters.
+        buffer = str[j - 1] + char;
+        if (buffer === '--') {
+          closeEnd = buffer;
+        }
       } else if (quote) {
         if (char === quote) {
           quote = '';
         }
         buffer += char;
-      } else if (expr !== EXPR_COMMENT && (char === '"' || char === "'")) {
+      } else if (char === '"' || char === "'") {
         quote = char;
         buffer += char;
-      } else if (closeSlice === closeTag && str[j + closeTag.length] !== '}') {
-        j += closeTag.length - 1;
-        if (expr === EXPR_VAR) nonSpace = true;
-
-        if (expr === EXPR_COMMENT) {
-          commit('');
-          closeTag = '}}';
-        } else {
-          commit();
-          propName = '';
-        }
-        mode = MODE_TEXT;
-      } else if (expr === EXPR_COMMENT) {
-        buffer += char;
-        if (buffer === '--') {
-          closeTag = '--}}';
-        }
       } else if (isWhiteSpace) {
         if (expr === EXPR_INVERSE) {
           // Add `else` chaining.
@@ -192,7 +195,6 @@ export const build = function(statics) {
   }
 
   stripSpace();
-
   return current;
 
   function commit(field) {
@@ -232,8 +234,6 @@ export const build = function(statics) {
   }
 
   function stripSpace() {
-    // log('TAG', hasTag, !nonSpace, buffer);
-    // log('LINE', line.slice());
     if (hasTag && !nonSpace) {
       buffer = buffer.replace(/\r?\n$/, '');
 
@@ -243,7 +243,7 @@ export const build = function(statics) {
           if (/[\S\n]/.test(field[field.length - 1])) {
             return true;
           }
-          curr[i] = field = field.slice(0, -1)
+          curr[i] = field = field.slice(0, -1);
         }
       });
     }
@@ -254,10 +254,8 @@ export const build = function(statics) {
 };
 
 function eachToken(currents, fn) {
-  let i = currents.length;
-  while (i--) {
-    let j = currents[i].length;
-    while (j > 2) {
+  for (let i = currents.length; i--;) {
+    for (let j = currents[i].length; j > 2;) {
       if (fn(currents[i][--j], currents[i][--j], j, currents[i])) {
         return;
       }
@@ -265,7 +263,14 @@ function eachToken(currents, fn) {
   }
 }
 
-export const evaluate = (h, built, fields, context, data, depths = [context]) => {
+export const evaluate = (
+  h,
+  built,
+  fields,
+  context,
+  data,
+  depths = [context]
+) => {
   const statics = [];
   const exprs = [];
   // log('BUILT', built);
@@ -303,25 +308,21 @@ export const evaluate = (h, built, fields, context, data, depths = [context]) =>
        *  ]
        */
       const makeFun = ifOrElse => (ctx, opts) => {
-        const data = opts && opts.data || {};
-        data.root = ctx;
-
         if (depths) {
-          depths = ctx != depths[0] ?
-            [ctx].concat(depths) : depths;
+          depths = ctx != depths[0] ? [ctx].concat(depths) : depths;
         } else {
           depths = [ctx];
         }
 
-        return evaluate(h, ifOrElse, fields, ctx, data, depths);
-      }
+        return evaluate(h, ifOrElse, fields, ctx, opts && opts.data, depths);
+      };
 
       const value = block(field[1][1], context, {
         fn: makeFun([0].concat(field[1].slice(5))),
         inverse: makeFun(field[2]),
         params: field[1][3],
         hash: field[1][4],
-        inverted: field[3],
+        inverted: field[3], // @todo add to babel plugin
         data,
         depths
       });

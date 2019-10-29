@@ -33,10 +33,8 @@ export function block(field, context, options) {
   if (helpers[field]) {
     value = helpers[field].apply(
       context,
-      options.params
-        .map(lookup(context, options))
-        .concat(options)
-    )
+      options.params.map(lookup(context, options)).concat(options)
+    );
   } else {
     value = lookup(context, options)(field);
 
@@ -46,20 +44,13 @@ export function block(field, context, options) {
       options.inverse = tmp;
     }
 
-    if (Array.isArray(value)) {
-      options.params = [value];
-      return block('each', context, options);
-    } else if (
-      typeof value === 'object' ||
-      typeof value === 'string' ||
-      typeof value === 'number'
-    ) {
-      options.params = [value];
-      return block('with', context, options);
-    } else {
-      options.params = [value];
-      return block('if', context, options);
-    }
+    options.params = [value];
+
+    return block(
+      Array.isArray(value) ? 'each' : typeof value === 'object' ? 'with' : 'if',
+      context,
+      options
+    );
   }
 
   return value;
@@ -78,8 +69,7 @@ function withHelper(context, options) {
     let data = options.data;
 
     return options.fn(context, {
-      data: data,
-      blockParams: [context]
+      data: data
     });
   } else {
     return options.inverse(this);
@@ -91,10 +81,7 @@ function ifHelper(conditional, options) {
     conditional = conditional.call(this);
   }
 
-  // Default behavior is to render the positive path if the value is truthy and not empty.
-  // The `includeZero` option may be set to treat the condtional as purely not empty based on the
-  // behavior of isEmpty. Effectively this determines if 0 is handled by the positive path or negative.
-  if ((!options.hash.includeZero && !conditional) || isEmpty(conditional)) {
+  if (!conditional || isEmpty(conditional)) {
     return options.inverse(this);
   } else {
     return options.fn(this);
@@ -132,8 +119,7 @@ function eachHelper(context, options) {
 
     ret.push(
       options.fn(context[field], {
-        data: data,
-        blockParams: [context[field], field]
+        data: data
       })
     );
   }
