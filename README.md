@@ -5,11 +5,23 @@
 [![codecov](https://img.shields.io/codecov/c/github/luwes/hyperstache.svg?style=flat-square)](https://codecov.io/gh/luwes/hyperstache)
 [![code style: prettier](https://img.shields.io/badge/code_style-prettier-ff69b4.svg?style=flat-square)](https://github.com/prettier/prettier)
 
-[Handlebars](https://github.com/wycats/handlebars.js/) to template literals transformer.
+Logic-less templates to template literals transformer.  
+Hyperstache includes a full parser and runtime.  
+It uses no `eval` and minimal regex for the best performance.  
+It's largely compatible with [Handlebars](https://github.com/wycats/handlebars.js/) and [Mustache](https://github.com/janl/mustache.js/) templates.
 
 **npm**: `npm install hyperstache --save`  
 **cdn**: https://unpkg.com/hyperstache  
 **module**: https://unpkg.com/hyperstache?module
+
+## Why?
+
+The goal is to make projects invested in Handlebars templates adopt a tagged templates only solution easily or add an additional layer of logic-less templates on top of any tagged template library.
+
+- [Sinuous](https://github.com/luwes/sinuous/) ([CodeSandbox](https://codesandbox.io/s/hyperstache-sinuous-5j4u9))
+- [htm](https://github.com/developit/htm) ([CodeSandbox](https://codesandbox.io/s/hyperstache-htm-ju83x))
+- [Lighterhtml](https://github.com/WebReflection/lighterhtml) ([CodeSandbox](https://codesandbox.io/s/hyperstache-lighterhtml-qnesy))
+- [lit-html](https://github.com/Polymer/lit-html)
 
 ## `hyperstache` by the numbers:
 
@@ -32,7 +44,7 @@
 - [x] whitespace control `{{~ trimStart }}`
 - [ ] helper block parameters
 - [ ] subexpressions
-- [ ] partials `{{>partial}}`
+- [ ] partials `{{>partial}}` 
 
 ## Usage ([CodeSandbox](https://codesandbox.io/s/boring-breeze-y3od0))
 
