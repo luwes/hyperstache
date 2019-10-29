@@ -2,6 +2,12 @@
 
 This project adheres to [Semantic Versioning](http://semver.org/).
 
+## 0.5.0 - 2019-10-29
+
+### Added
+
+- Made most of Mustache spec pass [#10](https://github.com/luwes/hyperstache/pull/10)
+
 ## 0.4.0 - 2019-10-25
 
 ### Added
