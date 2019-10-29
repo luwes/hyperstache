@@ -90,16 +90,16 @@ test('simple block helpers', t => {
   t.deepEqual(
     hbs`<div>
       {{#bold}}
-        {{body}}
-      {{/bold}}
+        {{~body}}
+      {{/bold~}}
     </div>`({ body: 'hyper' }),
     h('div', null, h('b', null, 'hyper'))
   );
   t.deepEqual(
     hbs`<div>
-      {{#bold}}
+      {{#bold~}}
         <span>{{body}}</span>
-      {{/bold}}
+      {{/bold~}}
     </div>`({ body: 'hyper' }),
     h('div', null, h('b', null, h('span', null, 'hyper')))
   );
@@ -109,10 +109,10 @@ test('simple block helpers', t => {
 test('block helpers with args', t => {
   t.deepEqual(
     hbs`
-      {{#with story}}
+      {{#with story~}}
         <div class="intro">{{{intro}}}</div>
         <div class="body">{{{body}}}</div>
-      {{/with}}
+      {{/with~}}
       `({ story: { intro: 'Hello', body: 'World' } }),
     [
       { tag: 'div', props: { class: 'intro' }, children: ['Hello'] },
@@ -128,9 +128,9 @@ test('if/else/unless without chaining', t => {
   t.deepEqual(hbs`{{#if false}}Hello{{else}}Bye{{/if}}`(), 'Bye');
 
   t.deepEqual(hbs`
-    {{#unless license}}
+    {{#unless license~}}
       WARNING: This entry does not have a license!
-    {{/unless}}
+    {{/unless~}}
   `({ license: false }), 'WARNING: This entry does not have a license!');
 
   t.deepEqual(hbs`
@@ -138,7 +138,7 @@ test('if/else/unless without chaining', t => {
       Hello
     {{else}}
       {{#if true}}Bye{{/if}}
-    {{/if}}
+    {{/if~}}
   `(), 'Bye');
 
   t.deepEqual(hbs`
@@ -147,10 +147,10 @@ test('if/else/unless without chaining', t => {
     {{else}}
       {{#if false}}
         Hello again
-      {{else}}
+      {{else~}}
         Bye
       {{/if}}
-    {{/if}}
+    {{/if~}}
   `(), 'Bye');
 
   t.end();
@@ -162,7 +162,7 @@ test('if/else with chaining', t => {
     {{#if false}}
       Hello 1
     {{else}}
-      {{#if true}}
+      {{#if true~}}
         Hello 2
       {{else}}
         {{#if false}}
@@ -171,15 +171,15 @@ test('if/else with chaining', t => {
           Bye
         {{/if}}
       {{/if}}
-    {{/if}}
+    {{/if~}}
   `(), 'Hello 2');
 
   t.deepEqual(hbs`
     {{#if false}}
       Hello
-    {{else if true}}
+    {{else if true~}}
       Bye
-    {{/if}}
+    {{/if~}}
     `({ truthy: 1 }), 'Bye');
 
   t.deepEqual(hbs`
@@ -188,10 +188,10 @@ test('if/else with chaining', t => {
     {{else if false}}
       Hey again
     {{else if true}}
-      {{#if truthy}}
+      {{#if truthy~}}
         Bye
       {{/if}}
-    {{/if}}
+    {{/if~}}
     99
     `({ truthy: 1 }), ['Bye', '99']);
 
@@ -204,11 +204,11 @@ test('if/else with chaining', t => {
       Hello 3
     {{else if false}}
       Hello 4
-    {{else if true}}
+    {{else if true~}}
       Hello 5
     {{else}}
       Bye
-    {{/if}}
+    {{/if~}}
     `(), 'Hello 5');
 
   t.deepEqual(hbs`
@@ -222,15 +222,15 @@ test('if/else with chaining', t => {
       Hello 4
     {{else if false}}
       Hello 5
-    {{else}}
+    {{else~}}
       Bye
-    {{/if}}
+    {{/if~}}
     `(), 'Bye');
 
   t.deepEqual(hbs`
     {{#if false}}
       Hello
-    {{else if true}}
+    {{else if true~}}
       Hello 2
     {{else if true}}
       Hello 3
@@ -240,31 +240,85 @@ test('if/else with chaining', t => {
       Hello 5
     {{else}}
       Bye
-    {{/if}}
+    {{/if~}}
     `(), 'Hello 2');
 
   t.deepEqual(hbs`
     {{#if false}}
       99 licenses
-    {{else unless license}}
+    {{else unless license~}}
       WARNING: This entry does not have a license!
-    {{/unless}}
+    {{/unless~}}
   `({ license: false }), 'WARNING: This entry does not have a license!');
 
   t.end();
 });
 
-test('each', t => {
-  // iterate over arrays
+test('template comments', t => {
+  t.deepEqual(
+    hbs`<div>{{! This comment will not show up in the output}}</div>`(),
+    { tag: 'div', props: null, children: [''] }
+  );
+  t.deepEqual(
+    hbs`<div>{{!-- This comment may contain mustaches like }} --}}</div>`(),
+    { tag: 'div', props: null, children: [''] }
+  );
+  t.deepEqual(
+    hbs`
+      <div>
+        {{!-- This comment may contain mustaches like }} --}}
+        {{~fruit~}}
+      </div>
+    `({ fruit: 'Banana' }),
+    { tag: 'div', props: null, children: ['', 'Banana'] }
+  );
+  t.end();
+});
+
+test('@data variables', t => {
+  const ctx = {};
+  t.equals(
+    hbs`<div>{{@root}}</div>`(ctx).children[0],
+    ctx
+  );
+  t.end();
+});
+
+test('hash params', t => {
+  t.deepEqual(hbs` {{mul a=8 b=20}}`(), [' ', 160]);
+  t.deepEqual(hbs`{{pass value=33}}`(), 33);
+  t.deepEqual(hbs`{{pass value=true}}`(), true);
+  t.deepEqual(hbs`{{pass value=false}}`(), false);
+  t.deepEqual(hbs`{{pass value=null}}`(), '');
+  t.deepEqual(hbs`{{pass value=undefined}}`(), '');
+  t.end();
+});
+
+test('each over array', t => {
   t.deepEqual(hbs`
-    {{#each comments}}
+    {{#each @root}}
+      {{~@root}}
+    {{~/each~}}
+  `([
+    'Item 1',
+    'Item 2',
+    'Item 3'
+  ]),
+  [
+    'Item 1',
+    'Item 2',
+    'Item 3'
+  ]);
+
+  t.deepEqual(hbs`
+    {{#each comments~}}
       <div class="comment{{@index}}">
         <h2>{{subject}}</h2>
-        {{#if @first}},{{/if}}
-        {{#if @last}}last one{{/if}}
+        {{~#if @first}},{{/if~}}
+        {{~#if @last}}last one{{/if~}}
         {{{body}}}
       </div>
-    {{/each}}
+    {{/each~}}
   `({ comments: [
     { subject: 'Hello', body: hbs`<p>World</p>`() },
     { subject: 'Handle', body: hbs`<p>Bars</p>`() },
@@ -298,13 +352,16 @@ test('each', t => {
         <h2>{{subject}}</h2>
         {{{body}}}
       </div>
-    {{else}}
+    {{else~}}
       no dice
-    {{/each}}
+    {{/each~}}
   `({ comments: [] }), 'no dice'
   );
 
-  // iterate over objects
+  t.end();
+});
+
+test('each over object', t => {
   t.deepEqual(hbs`
     <ul>{{#each list}}<li>{{name}}</li>{{else}}no dice{{/each}}</ul>
   `({ list: {
@@ -314,46 +371,45 @@ test('each', t => {
       { tag: 'li', props: null, children: [ 'John' ] },
       { tag: 'li', props: null, children: [ 'Frank' ] } ] ] }
   );
-
   t.end();
 });
 
-test('template comments', t => {
-  t.deepEqual(
-    hbs`<div>{{! This comment will not show up in the output}}</div>`(),
-    { tag: 'div', props: null, children: [''] }
-  );
-  t.deepEqual(
-    hbs`<div>{{!-- This comment may contain mustaches like }} --}}</div>`(),
-    { tag: 'div', props: null, children: [''] }
-  );
-  t.deepEqual(
-    hbs`
-      <div>
-        {{!-- This comment may contain mustaches like }} --}}
-        {{fruit}}
-      </div>
-    `({ fruit: 'Banana' }),
-    { tag: 'div', props: null, children: ['', 'Banana'] }
-  );
-  t.end();
-});
-
-test('@data variables', t => {
-  const ctx = {};
-  t.equals(
-    hbs`<div>{{@root}}</div>`(ctx).children[0],
-    ctx
-  );
-  t.end();
-});
-
-test('hash params', t => {
-  t.deepEqual(hbs` {{mul a=8 b=20}}`(), [' ', 160]);
-  t.deepEqual(hbs`{{pass value=33}}`(), 33);
-  t.deepEqual(hbs`{{pass value=true}}`(), true);
-  t.deepEqual(hbs`{{pass value=false}}`(), false);
-  t.deepEqual(hbs`{{pass value=null}}`(), '');
-  t.deepEqual(hbs`{{pass value=undefined}}`(), '');
+test('Deeply Nested Contexts', t => {
+  t.deepEqual(hbs`
+{{~#a}}
+{{one}}
+{{#b}}
+{{one}}{{two}}{{one}}
+{{#c}}
+{{one}}{{two}}{{three}}{{two}}{{one}}
+{{#d}}
+{{one}}{{two}}{{three}}{{four}}{{three}}{{two}}{{one}}
+{{#e}}
+{{one}}{{two}}{{three}}{{four}}{{five}}{{four}}{{three}}{{two}}{{one}}
+{{/e}}
+{{one}}{{two}}{{three}}{{four}}{{three}}{{two}}{{one}}
+{{/d}}
+{{one}}{{two}}{{three}}{{two}}{{one}}
+{{/c}}
+{{one}}{{two}}{{one}}
+{{/b}}
+{{one}}
+{{/a~}}
+  `({
+    a: { one: 1 },
+    b: { two: 2 },
+    c: { three: 3 },
+    d: { four: 4 },
+    e: { five: 5 }
+  }), [ 1,
+      [ 1, 2, 1,
+        [ 1, 2, 3, 2, 1,
+          [ 1, 2, 3, 4, 3, 2, 1,
+            [ 1, 2, 3, 4, 5, 4, 3, 2, 1 ],
+          1, 2, 3, 4, 3, 2, 1
+        ], 1, 2, 3, 2, 1
+      ], 1, 2, 1
+    ], 1
+  ]);
   t.end();
 });

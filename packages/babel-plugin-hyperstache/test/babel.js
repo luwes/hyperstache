@@ -19,30 +19,31 @@ test('basic transformation', t => {
       ...options,
       plugins: [hysBabelPlugin]
     }).code,
-    out('template((hys,ctx,data)=>html`<div id=hello>${"hello"}</div>`);')
+    out('template((ctx,data,depths,hys)=>html`<div id=hello>${"hello"}</div>`);')
   );
   t.equal(
     transform('hbs`<div id=hello>{{"hello"}}</div>`;', {
       ...options,
       plugins: [hysBabelPlugin]
     }).code,
-    out('template((hys,ctx,data)=>html`<div id=hello>${hys.escape("hello")}</div>`);')
+    out('template((ctx,data,depths,hys)=>html`<div id=hello>${hys.escape("hello")}</div>`);')
   );
   t.equal(
     transform('hbs`<div id=hello>{{99}}</div>`;', {
       ...options,
       plugins: [hysBabelPlugin]
     }).code,
-    out('template((hys,ctx,data)=>html`<div id=hello>${99}</div>`);')
+    out('template((ctx,data,depths,hys)=>html`<div id=hello>${99}</div>`);')
   );
   t.equal(
     transform('hbs`<div id=hello>{{fruit}}</div>`;', {
       ...options,
       plugins: [hysBabelPlugin]
     }).code,
-    out('template((hys,ctx,data)=>html`<div id=hello>${' +
+    out('template((ctx,data,depths,hys)=>html`<div id=hello>${' +
         'hys.escape(hys.expr("fruit",ctx,{' +
-          'data' +
+          'data,' +
+          'depths' +
         '}))' +
       '}</div>`);')
   );
@@ -51,9 +52,10 @@ test('basic transformation', t => {
       ...options,
       plugins: [hysBabelPlugin]
     }).code,
-    out('template((hys,ctx,data)=>html`<div id=hello>${hys.escape(hys.expr("loud",ctx,{' +
+    out('template((ctx,data,depths,hys)=>html`<div id=hello>${hys.escape(hys.expr("loud",ctx,{' +
       'params:["\\"big\\""],' +
-      'data' +
+      'data,' +
+      'depths' +
       '}))}</div>`);')
   );
   t.equal(
@@ -61,9 +63,10 @@ test('basic transformation', t => {
       ...options,
       plugins: [hysBabelPlugin]
     }).code,
-    out('template((hys,ctx,data)=>html`<div id=hello>${hys.escape(hys.expr("sum",ctx,{' +
+    out('template((ctx,data,depths,hys)=>html`<div id=hello>${hys.escape(hys.expr("sum",ctx,{' +
       'hash:{"a":1,"b":1},' +
-      'data' +
+      'data,' +
+      'depths' +
       '}))}</div>`);')
   );
   t.equal(
@@ -71,11 +74,13 @@ test('basic transformation', t => {
       ...options,
       plugins: [hysBabelPlugin]
     }).code,
-    out('template((hys,ctx,data)=>html`${hys.block("bold",ctx,{' +
-        'fn:template((hys,ctx,data)=>html`${hys.escape(hys.expr("body",ctx,{' +
-          'data' +
+    out('template((ctx,data,depths,hys)=>html`${hys.block("bold",ctx,{' +
+        'fn:template((ctx,data,depths)=>html`${hys.escape(hys.expr("body",ctx,{' +
+          'data,' +
+          'depths' +
         '}))}`),' +
-        'data' +
+        'data,' +
+        'depths' +
       '})}`);')
   );
   t.equal(
@@ -83,11 +88,12 @@ test('basic transformation', t => {
       ...options,
       plugins: [hysBabelPlugin]
     }).code,
-    out('template((hys,ctx,data)=>html`${hys.block("if",ctx,{' +
-      'fn:template((hys,ctx,data)=>html`99`),' +
-      'inverse:template((hys,ctx,data)=>html`11`),' +
+    out('template((ctx,data,depths,hys)=>html`${hys.block("if",ctx,{' +
+      'fn:template((ctx,data,depths)=>html`99`),' +
+      'inverse:template((ctx,data,depths)=>html`11`),' +
       'params:[true],' +
-      'data' +
+      'data,' +
+      'depths' +
       '})}`);')
   );
   t.end();

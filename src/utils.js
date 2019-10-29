@@ -41,16 +41,28 @@ export function parseLiteral(value) {
   return value;
 }
 
-export function parseVar(context, data) {
+export function lookup(context, options) {
+  const data = options.data;
+  const depths = options.depths;
   return name => {
     if (typeof name === 'string') {
       const unwrapped = unwrap(name, '"') || unwrap(name, "'");
       if (unwrapped) {
-        name = unwrapped;
+        return unwrapped;
       } else if (name[0] === '@' && (name = name.slice(1)) && name in data) {
-        name = data[name];
+        return data[name];
       } else {
-        name = objectPath(name, context);
+        if (name === '.') {
+          return context;
+        } else {
+          const paths = name.split('.');
+          for (let i = 0; i < depths.length; i++) {
+            if (depths[i] && objectPath([paths[0]], depths[i]) != null) {
+              return objectPath(paths, depths[i]);
+            }
+          }
+          return;
+        }
       }
     }
     return name;
@@ -58,7 +70,6 @@ export function parseVar(context, data) {
 }
 
 export function objectPath(paths, val) {
-  paths = paths.split('.');
   let idx = 0;
   while (idx < paths.length) {
     if (val == null) {

@@ -17,10 +17,10 @@ export default function hysBabelPlugin({ types: t }, options = {}) {
       const built = build(stats);
       // log('BUILT', built);
 
-      const node = evaluate(built, fields);
+      const node = evaluate(built, fields, true);
 
-      // var _hys = require("hyperstache/runtime");
-      const runtimeTpl =  t.variableDeclaration(
+      // const { template } = require("hyperstache/runtime");
+      const runtimeTpl = t.variableDeclaration(
         'const',
         [
           t.variableDeclarator(
@@ -47,7 +47,7 @@ export default function hysBabelPlugin({ types: t }, options = {}) {
     }
   }
 
-  const evaluate = (built, fields) => {
+  const evaluate = (built, fields, root) => {
     const statics = [];
     const exprs = [];
     // log('BUILT', built);
@@ -98,6 +98,13 @@ export default function hysBabelPlugin({ types: t }, options = {}) {
             true // shorthand
           ));
 
+          properties.push(t.objectProperty(
+            t.identifier('depths'),
+            t.identifier('depths'),
+            false, // computed
+            true // shorthand
+          ));
+
           const options = t.objectExpression(properties);
           args.push(options);
 
@@ -130,14 +137,14 @@ export default function hysBabelPlugin({ types: t }, options = {}) {
         const properties = [
           t.objectProperty(
             t.identifier('fn'),
-            evaluate([0].concat(field[1].slice(5)))
+            evaluate([0].concat(field[1].slice(5)), fields)
           )
         ];
 
         if (inverse.length > 1) {
           properties.push(t.objectProperty(
             t.identifier('inverse'),
-            evaluate(inverse)
+            evaluate(inverse, fields)
           ))
         }
 
@@ -167,6 +174,13 @@ export default function hysBabelPlugin({ types: t }, options = {}) {
           true // shorthand
         ));
 
+        properties.push(t.objectProperty(
+          t.identifier('depths'),
+          t.identifier('depths'),
+          false, // computed
+          true // shorthand
+        ));
+
         const options = t.objectExpression(properties);
         args.push(options);
 
@@ -183,8 +197,14 @@ export default function hysBabelPlugin({ types: t }, options = {}) {
     }
 
     // log('EXPRS', exprs);
+    const params = [];
+    params.push(t.identifier('ctx'));
+    params.push(t.identifier('data'));
+    params.push(t.identifier('depths'));
+    if (root) {
+      params.push(t.identifier('hys'));
+    }
 
-    const params = [t.identifier('hys'), t.identifier('ctx'), t.identifier('data')];
     const quasi = t.templateLiteral(statics, exprs);
     const body = t.taggedTemplateExpression(t.identifier(htmlName), quasi);
     const node = t.callExpression(

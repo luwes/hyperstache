@@ -9,7 +9,7 @@ const MODE_TEXT = 1;
 const MODE_EXPR_SET = 3;
 const MODE_EXPR_APPEND = 4;
 
-const CHILD_APPEND = 0;
+const TEXT = 0;
 export const CHILD_RECURSE = 1;
 const EXPR_INVERSE = 2;
 const EXPR_BLOCK = 3;
@@ -22,8 +22,8 @@ export const build = function(statics) {
   let mode = MODE_TEXT;
   let expr;
   let buffer = '';
-  let lastBuffer = '';
-  let quote = '';
+  let lastBuffer;
+  let quote;
   let current = [0];
   let char;
   let openTag = '{{';
@@ -32,10 +32,16 @@ export const build = function(statics) {
   let closeSlice;
   let propName;
 
+  let line = [current];   // Keeps track of `current` arrays per line.
+  let lines = line;       // Keeps track of all `current` arrays.
+  let hasTag;             // Is there a {{tag}} on the current line?
+  let nonSpace;           // Is there a non-space char on the current line?
+  let isWhiteSpace;       // Is current character a space?
+  let skipWhiteSpace;
+
   // log('STATICS', statics);
   for (let i = 0; i < statics.length; i++) {
-    // This can be a SafeString obj, convert to string.
-    str = '' + statics[i];
+    str = statics[i];
 
     if (i) {
       if (mode === MODE_TEXT) {
@@ -52,33 +58,53 @@ export const build = function(statics) {
       char = str[j];
       openSlice = str.substr(j, openTag.length);
       closeSlice = str.substr(j, closeTag.length);
+      isWhiteSpace = /\s/.test(char);
 
       if (mode === MODE_TEXT) {
         if (openSlice === openTag) {
+          skipWhiteSpace = false;
+
           commit();
           if (!lastBuffer) {
             // Add a split if there is no content before the expression.
             commit('');
           }
 
+          hasTag = true;
           expr = EXPR_VAR;
           mode = MODE_EXPR_SET;
           j++;
         } else {
+          if (!isWhiteSpace) {
+            nonSpace = true;
+            skipWhiteSpace = false;
+          }
+
+          if (!skipWhiteSpace || !isWhiteSpace) {
+            buffer += char;
+          }
+
+          if (char === '\n') {
+            stripSpace();
+            lines = lines.concat(line);
+            line = [current];
+          }
+
           expr = undefined;
-          buffer += char;
         }
       } else if (quote) {
         if (char === quote) {
           quote = '';
         }
         buffer += char;
-      } else if (char === '"' || char === "'") {
+      } else if (expr !== EXPR_COMMENT && (char === '"' || char === "'")) {
         quote = char;
         buffer += char;
       } else if (closeSlice === closeTag && str[j + closeTag.length] !== '}') {
         j += closeTag.length - 1;
-        if (expr == EXPR_COMMENT) {
+        if (expr === EXPR_VAR) nonSpace = true;
+
+        if (expr === EXPR_COMMENT) {
           commit('');
           closeTag = '}}';
         } else {
@@ -86,17 +112,12 @@ export const build = function(statics) {
           propName = '';
         }
         mode = MODE_TEXT;
-      } else if (expr == EXPR_COMMENT) {
+      } else if (expr === EXPR_COMMENT) {
         buffer += char;
         if (buffer === '--') {
           closeTag = '--}}';
         }
-      } else if (
-        char === ' ' ||
-        char === '\t' ||
-        char === '\n' ||
-        char === '\r'
-      ) {
+      } else if (isWhiteSpace) {
         if (expr === EXPR_INVERSE) {
           // Add `else` chaining.
           // e.g. transforms {{else if }} into {{else}}{{#/if }}
@@ -111,25 +132,43 @@ export const build = function(statics) {
             propName = '';
           }
         }
-      } else if ((!buffer && char === '{') || char === '}') {
+      } else if (char === '~' && str[j + 1] === '}') {
+        skipWhiteSpace = true;
+      } else if (!buffer && char === '~') {
+        // Remove previous whitespace until a tag or non space character.
+        eachToken(lines, (type, field, i, curr) => {
+          if (type > TEXT) return true;
+          while (type === TEXT && field) {
+            if (/\S/.test(field[field.length - 1])) {
+              return true;
+            }
+            curr[i] = field = field.slice(0, -1);
+          }
+        });
+      } else if ((!buffer && (char === '{' || char === '&')) || char === '}') {
         // First `{` after opening expression `{{`.
         expr = EXPR_RAW;
+        nonSpace = true;
       } else if (!buffer && char === '!') {
         expr = EXPR_COMMENT;
-      } else if (!buffer && char === '#') {
+      } else if (!buffer && (char === '#' || char === '^')) {
         // First `#` after opening expression `{{`.
+
         // [1] is reserved for `if`, [2] for `else`.
         const block = [current];
         current = block[1] = [block];
+        line.push(current);
         block[2] = [block];
-        block[3] = str[j + 1] === '/' && ++j; // autoclose
+        block[3] = char === '^';
+        block[4] = str[j + 1] === '/' && ++j; // autoclose
+
         expr = EXPR_BLOCK;
         mode = MODE_EXPR_SET;
       } else if (char === '=') {
         propName = buffer;
         buffer = '';
       } else if (char === '/') {
-        if (current[0][3]) {
+        if (current[0][4]) {
           // autoclose
           str = `}}{{/${str.substr(j + 1)}`;
           j = -1;
@@ -137,17 +176,22 @@ export const build = function(statics) {
 
         mode = current[0];
         (current = current[0][0]).push(mode, CHILD_RECURSE);
+
+        expr = EXPR_BLOCK;
         // mode = MODE_SLASH;
       } else {
         buffer += char;
       }
     }
   }
+
   commit();
   if (!lastBuffer) {
     // Add a split if there is no content before the expression.
     commit('');
   }
+
+  stripSpace();
 
   return current;
 
@@ -156,16 +200,16 @@ export const build = function(statics) {
     if (field != null) {
       value = field;
     } else {
-      buffer = buffer.replace(/^\s*\n\s*|\s*\n\s*$/g, '');
       if (buffer) value = buffer;
     }
 
     if (mode === MODE_TEXT && value != null) {
-      current.push(value, CHILD_APPEND);
+      current.push(value, TEXT);
     } else if (mode >= MODE_EXPR_SET && value != null) {
       if (mode === MODE_EXPR_SET) {
         if (buffer === 'else' || buffer === '^') {
           current = current[0][2];
+          line.push(current);
           expr = EXPR_INVERSE;
           mode = MODE_EXPR_SET;
         } else {
@@ -186,9 +230,42 @@ export const build = function(statics) {
     lastBuffer = buffer;
     buffer = '';
   }
+
+  function stripSpace() {
+    // log('TAG', hasTag, !nonSpace, buffer);
+    // log('LINE', line.slice());
+    if (hasTag && !nonSpace) {
+      buffer = buffer.replace(/\r?\n$/, '');
+
+      eachToken(line, (type, field, i, curr) => {
+        while (type === TEXT && field) {
+          // Remove whitespace until \n or non space character.s
+          if (/[\S\n]/.test(field[field.length - 1])) {
+            return true;
+          }
+          curr[i] = field = field.slice(0, -1)
+        }
+      });
+    }
+
+    nonSpace = false;
+    hasTag = false;
+  }
 };
 
-export const evaluate = (h, built, fields, context, data) => {
+function eachToken(currents, fn) {
+  let i = currents.length;
+  while (i--) {
+    let j = currents[i].length;
+    while (j > 2) {
+      if (fn(currents[i][--j], currents[i][--j], j, currents[i])) {
+        return;
+      }
+    }
+  }
+}
+
+export const evaluate = (h, built, fields, context, data, depths = [context]) => {
   const statics = [];
   const exprs = [];
   // log('BUILT', built);
@@ -203,7 +280,8 @@ export const evaluate = (h, built, fields, context, data) => {
       let value = expr(field, context, {
         params: built[++i],
         hash: built[++i],
-        data
+        data,
+        depths
       });
       // log('VALUE', value);
 
@@ -224,15 +302,28 @@ export const evaluate = (h, built, fields, context, data) => {
        *   [[parent], if, 5, ['@last'], {}, 'body', 3, 'End', 1]      // else block
        *  ]
        */
-      const makeFun = ifOrElse => (ctx, opts) =>
-        evaluate(h, ifOrElse, fields, ctx, opts && opts.data);
+      const makeFun = ifOrElse => (ctx, opts) => {
+        const data = opts && opts.data || {};
+        data.root = ctx;
+
+        if (depths) {
+          depths = ctx != depths[0] ?
+            [ctx].concat(depths) : depths;
+        } else {
+          depths = [ctx];
+        }
+
+        return evaluate(h, ifOrElse, fields, ctx, data, depths);
+      }
 
       const value = block(field[1][1], context, {
         fn: makeFun([0].concat(field[1].slice(5))),
         inverse: makeFun(field[2]),
         params: field[1][3],
         hash: field[1][4],
-        data
+        inverted: field[3],
+        data,
+        depths
       });
 
       if (value) {
@@ -243,7 +334,7 @@ export const evaluate = (h, built, fields, context, data) => {
         exprs.push('');
       }
     } else {
-      // code === CHILD_APPEND
+      // type === TEXT
       statics.push(field);
     }
   }
