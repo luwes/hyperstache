@@ -1,6 +1,12 @@
 import { build, EXPR_VAR, CHILD_RECURSE } from '../../../src/build.js';
 import { unwrap, parseLiteral, log } from '../../../src/utils.js';
 
+const defaults = {
+  tag: 'hbs',
+  tagOut: 'html',
+  runtime: 'hyperstache/runtime'
+}
+
 /**
  * @param {Babel} babel
  * @param {object} options
@@ -8,9 +14,11 @@ import { unwrap, parseLiteral, log } from '../../../src/utils.js';
  * @param {string} [options.tagOut=html]  The tagged template "tag" function name to output.
  */
 export default function hysBabelPlugin({ types: t }, options = {}) {
+  options = { ...defaults, ...options };
+
   function TaggedTemplateExpression(path) {
     const tag = path.node.tag.name;
-    if (tag === hbsName) {
+    if (tag === options.tag) {
       const stats = path.node.quasi.quasis.map(e => e.value.raw);
       const fields = [0, ...path.node.quasi.expressions];
 
@@ -20,30 +28,23 @@ export default function hysBabelPlugin({ types: t }, options = {}) {
       const node = evaluate(built, fields, true);
 
       // const { template } = require("hyperstache/runtime");
-      const runtimeTpl = t.variableDeclaration(
-        'const',
-        [
-          t.variableDeclarator(
-            t.objectPattern([
-              t.objectProperty(
-                t.identifier('template'),
-                t.identifier('template'),
-                false,
-                true
-              )
-            ]),
-            t.callExpression(
-              t.identifier('require'),
-              [t.stringLiteral('hyperstache/runtime')]
+      const runtimeTpl = t.variableDeclaration('const', [
+        t.variableDeclarator(
+          t.objectPattern([
+            t.objectProperty(
+              t.identifier('template'),
+              t.identifier('template'),
+              false,
+              true
             )
-          )
-        ]
-      );
-
-      path.replaceWithMultiple([
-        runtimeTpl,
-        t.expressionStatement(node)
+          ]),
+          t.callExpression(t.identifier('require'), [
+            t.stringLiteral(options.runtime)
+          ])
+        )
       ]);
+
+      path.replaceWithMultiple([runtimeTpl, t.expressionStatement(node)]);
     }
   }
 
@@ -66,52 +67,60 @@ export default function hysBabelPlugin({ types: t }, options = {}) {
         // log('EXPR', expr);
 
         if (t.isIdentifier(expr)) {
-          const args = [
-            t.stringLiteral(field),
-            t.identifier('ctx')
-          ];
+          const args = [t.stringLiteral(field), t.identifier('ctx')];
 
           const properties = [];
-          if (params.length >  0) {
-            properties.push(t.objectProperty(
-              t.identifier('params'),
-              t.arrayExpression(params.map(transformParams))
-            ))
+          if (params.length > 0) {
+            properties.push(
+              t.objectProperty(
+                t.identifier('params'),
+                t.arrayExpression(params.map(transformParams))
+              )
+            );
           }
 
-          if (Object.keys(hash).length >  0) {
-            properties.push(t.objectProperty(
-              t.identifier('hash'),
-              t.objectExpression(Object.keys(hash).map((key) => {
-                return t.objectProperty(
-                  t.stringLiteral(key),
-                  transform(hash[key])
-                );
-              }))
-            ));
+          if (Object.keys(hash).length > 0) {
+            properties.push(
+              t.objectProperty(
+                t.identifier('hash'),
+                t.objectExpression(
+                  Object.keys(hash).map(key => {
+                    return t.objectProperty(
+                      t.stringLiteral(key),
+                      transform(hash[key])
+                    );
+                  })
+                )
+              )
+            );
           }
 
-          properties.push(t.objectProperty(
-            t.identifier('data'),
-            t.identifier('data'),
-            false, // computed
-            true // shorthand
-          ));
+          properties.push(
+            t.objectProperty(
+              t.identifier('data'),
+              t.identifier('data'),
+              false, // computed
+              true // shorthand
+            )
+          );
 
-          properties.push(t.objectProperty(
-            t.identifier('depths'),
-            t.identifier('depths'),
-            false, // computed
-            true // shorthand
-          ));
+          properties.push(
+            t.objectProperty(
+              t.identifier('depths'),
+              t.identifier('depths'),
+              false, // computed
+              true // shorthand
+            )
+          );
 
-          const options = t.objectExpression(properties);
-          args.push(options);
-
+          args.push(t.objectExpression(properties));
           expr = t.callExpression(dottedIdentifier('hys.expr'), args);
         }
 
-        if (type === EXPR_VAR && (t.isCallExpression(expr) || t.isStringLiteral(expr))) {
+        if (
+          type === EXPR_VAR &&
+          (t.isCallExpression(expr) || t.isStringLiteral(expr))
+        ) {
           expr = t.callExpression(dottedIdentifier('hys.escape'), [expr]);
         }
         // log('EXPR', expr);
@@ -126,13 +135,11 @@ export default function hysBabelPlugin({ types: t }, options = {}) {
          */
         const fnName = field[1][1];
         const params = field[1][3];
-        const hash = field[1][4]
+        const hash = field[1][4];
         const inverse = field[2];
+        const inverted = field[3];
 
-        const args = [
-          t.stringLiteral(fnName),
-          t.identifier('ctx')
-        ];
+        const args = [t.stringLiteral(fnName), t.identifier('ctx')];
 
         const properties = [
           t.objectProperty(
@@ -142,57 +149,75 @@ export default function hysBabelPlugin({ types: t }, options = {}) {
         ];
 
         if (inverse.length > 1) {
-          properties.push(t.objectProperty(
-            t.identifier('inverse'),
-            evaluate(inverse, fields)
-          ))
+          properties.push(
+            t.objectProperty(t.identifier('inverse'), evaluate(inverse, fields))
+          );
         }
 
-        if (params.length >  0) {
-          properties.push(t.objectProperty(
-            t.identifier('params'),
-            t.arrayExpression(params.map(transformParams))
-          ))
+        if (params.length > 0) {
+          properties.push(
+            t.objectProperty(
+              t.identifier('params'),
+              t.arrayExpression(params.map(transformParams))
+            )
+          );
         }
 
-        if (Object.keys(hash).length >  0) {
-          properties.push(t.objectProperty(
-            t.identifier('hash'),
-            t.objectExpression(Object.keys(hash).map((key) => {
-              return t.objectProperty(
-                t.stringLiteral(key),
-                transformParams(hash[key])
-              );
-            }))
-          ));
+        if (Object.keys(hash).length > 0) {
+          properties.push(
+            t.objectProperty(
+              t.identifier('hash'),
+              t.objectExpression(
+                Object.keys(hash).map(key => {
+                  return t.objectProperty(
+                    t.stringLiteral(key),
+                    transformParams(hash[key])
+                  );
+                })
+              )
+            )
+          );
         }
 
-        properties.push(t.objectProperty(
-          t.identifier('data'),
-          t.identifier('data'),
-          false, // computed
-          true // shorthand
-        ));
+        if (inverted) {
+          properties.push(
+            t.objectProperty(
+              t.identifier('inverted'),
+              t.booleanLiteral(inverted)
+            )
+          );
+        }
 
-        properties.push(t.objectProperty(
-          t.identifier('depths'),
-          t.identifier('depths'),
-          false, // computed
-          true // shorthand
-        ));
+        properties.push(
+          t.objectProperty(
+            t.identifier('data'),
+            t.identifier('data'),
+            false, // computed
+            true // shorthand
+          )
+        );
 
-        const options = t.objectExpression(properties);
-        args.push(options);
+        properties.push(
+          t.objectProperty(
+            t.identifier('depths'),
+            t.identifier('depths'),
+            false, // computed
+            true // shorthand
+          )
+        );
 
+        args.push(t.objectExpression(properties));
         let expr = t.callExpression(dottedIdentifier('hys.block'), args);
         // log('EXPR', expr);
         exprs.push(expr);
       } else {
         // code === CHILD_APPEND
-        statics.push(t.templateElement({
-          raw: field,
-          cooked: field
-        }));
+        statics.push(
+          t.templateElement({
+            raw: field,
+            cooked: field
+          })
+        );
       }
     }
 
@@ -206,20 +231,19 @@ export default function hysBabelPlugin({ types: t }, options = {}) {
     }
 
     const quasi = t.templateLiteral(statics, exprs);
-    const body = t.taggedTemplateExpression(t.identifier(htmlName), quasi);
-    const node = t.callExpression(
-      t.identifier('template'),
-      [t.arrowFunctionExpression(params, body)]
-    );
+    const body = t.taggedTemplateExpression(t.identifier(options.tagOut), quasi);
+    const node = t.callExpression(t.identifier('template'), [
+      t.arrowFunctionExpression(params, body)
+    ]);
     return node;
-  }
+  };
 
   function dottedIdentifier(keypath) {
     const path = keypath.split('.');
     let out;
-    for (let i=0; i<path.length; i++) {
+    for (let i = 0; i < path.length; i++) {
       const ident = propertyName(path[i]);
-      out = i===0 ? ident : t.memberExpression(out, ident);
+      out = i === 0 ? ident : t.memberExpression(out, ident);
     }
     return out;
   }
@@ -276,15 +300,13 @@ export default function hysBabelPlugin({ types: t }, options = {}) {
     }
   }
 
-	// The tagged template tag function name we're looking for.
-	// This is static because it's generally assigned via htm.bind(h),
-	// which could be imported from elsewhere, making tracking impossible.
-	const hbsName = options.tag || 'hbs';
-  const htmlName = options.tagOut || 'html';
-	return {
-		name: 'hyperstache',
-		visitor: {
+  // The tagged template tag function name we're looking for.
+  // This is static because it's generally assigned via hyperstache.bind(html),
+  // which could be imported from elsewhere, making tracking impossible.
+  return {
+    name: 'hyperstache',
+    visitor: {
       TaggedTemplateExpression
     }
-	};
+  };
 }

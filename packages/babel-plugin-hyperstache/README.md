@@ -10,7 +10,8 @@ Basic usage:
 [
   ["hyperstache", {
     "tag": "hbs",
-    "tagOut": "html"
+    "tagOut": "html",
+    "runtime": "hyperstache/runtime"
   }]
 ]
 ```
