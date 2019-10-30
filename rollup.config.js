@@ -7,6 +7,28 @@ import bundleSize from 'rollup-plugin-size';
 import replace from 'rollup-plugin-replace';
 
 const env = process.env.NODE_ENV;
+
+const terserPlugin = terser({
+  sourcemap: true,
+  warnings: true,
+  compress: {
+    passes: 2
+  },
+  mangle: {
+    properties: {
+      regex: /^_/
+    }
+  },
+  nameCache: {
+    props: {
+      cname: 6,
+      props: {
+        // $_tag: '__t',
+      }
+    }
+  }
+});
+
 const config = {
   input: 'src/index.js',
   output: {
@@ -22,33 +44,12 @@ const config = {
     nodeResolve({
       preferBuiltins: true
     }),
-    builtins()
+    builtins(),
+    terserPlugin
   ]
 };
 
-const umdPlugins = [
-  babel(),
-  terser({
-    sourcemap: true,
-    warnings: true,
-    compress: {
-      passes: 10
-    },
-    mangle: {
-      properties: {
-        regex: /^_/
-      }
-    },
-    nameCache: {
-      props: {
-        cname: 6,
-        props: {
-          // $_tag: '__t',
-        }
-      }
-    }
-  })
-];
+const babelPlugin = babel();
 
 export default [
   {
@@ -68,7 +69,19 @@ export default [
     },
     plugins: [
       ...config.plugins,
-      ...umdPlugins
+      babelPlugin
+    ]
+  },
+  {
+    ...config,
+    output: {
+      ...config.output,
+      file: 'dist/hyperstache.min.js',
+      format: 'iife'
+    },
+    plugins: [
+      ...config.plugins,
+      babelPlugin
     ]
   },
   {
@@ -99,7 +112,23 @@ export default [
         delimiters: ['', ''],
         'export const MINI = false;': 'export const MINI = true;'
       }),
-      ...umdPlugins
+      babelPlugin
+    ]
+  },
+  {
+    ...config,
+    output: {
+      ...config.output,
+      file: 'dist/mini.min.js',
+      format: 'iife'
+    },
+    plugins: [
+      ...config.plugins,
+      replace({
+        delimiters: ['', ''],
+        'export const MINI = false;': 'export const MINI = true;'
+      }),
+      babelPlugin
     ]
   },
   {
@@ -121,7 +150,20 @@ export default [
     },
     plugins: [
       ...config.plugins,
-      ...umdPlugins
+      babelPlugin
+    ]
+  },
+  {
+    ...config,
+    input: 'src/runtime.js',
+    output: {
+      ...config.output,
+      file: 'dist/runtime.min.js',
+      format: 'iife'
+    },
+    plugins: [
+      ...config.plugins,
+      babelPlugin
     ]
   },
   {
@@ -154,7 +196,24 @@ export default [
         delimiters: ['', ''],
         'export const MINI = false;': 'export const MINI = true;'
       }),
-      ...umdPlugins
+      babelPlugin
+    ]
+  },
+  {
+    ...config,
+    input: 'src/runtime.js',
+    output: {
+      ...config.output,
+      file: 'dist/runtime-mini.min.js',
+      format: 'iife'
+    },
+    plugins: [
+      ...config.plugins,
+      replace({
+        delimiters: ['', ''],
+        'export const MINI = false;': 'export const MINI = true;'
+      }),
+      babelPlugin
     ]
   },
   {
@@ -173,10 +232,6 @@ export default [
       ...config.output,
       file: 'packages/babel-plugin-hyperstache/dist/babel-plugin-hyperstache.js',
       format: 'umd'
-    },
-    plugins: [
-      ...config.plugins,
-      ...umdPlugins
-    ]
+    }
   },
 ];

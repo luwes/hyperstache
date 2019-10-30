@@ -71,11 +71,13 @@ export function objectPath(paths, val) {
     if (val == null) {
       return;
     }
+
     const path =
       unwrap(paths[idx], '"') ||
       unwrap(paths[idx], "'") ||
       unwrap(paths[idx], '[]') ||
       paths[idx];
+
     val = val[path];
     idx++;
   }
@@ -117,8 +119,8 @@ export function escapeExpression(string) {
   if (string == null) return '';
 
   // don't escape SafeStrings, since they're already safe
-  if (string && string.toHTML) {
-    return string.toHTML();
+  if (string && string._toHTML) {
+    return string + '';
   }
 
   if (typeof string !== 'string') {
@@ -133,6 +135,6 @@ export function SafeString(string) {
   const toString = () => '' + string;
   return {
     toString,
-    toHTML: toString
+    _toHTML: toString
   }
 }

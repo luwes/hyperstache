@@ -16,7 +16,8 @@
     "dist",
     "src",
     "mini",
-    "runtime"
+    "runtime",
+    "runtime-mini"
   ],
   "author": "Wesley Luyten <me@wesleyluyten.com> (https://wesleyluyten.com)",
   "license": "MIT",

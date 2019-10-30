@@ -2,7 +2,7 @@
   "name": "hyperstache-mini",
   "private": true,
   "version": "0.0.1",
-  "description": "Hyperstache mini",
+  "description": "Hyperstache mini, no built-in helpers.",
   "module": "../module/mini.js",
   "main": "../dist/mini.js"
 }

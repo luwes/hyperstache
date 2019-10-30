@@ -413,3 +413,13 @@ test('Deeply Nested Contexts', t => {
   ]);
   t.end();
 });
+
+test('Falsey sections should have their contents rendered.', (t) => {
+  t.deepEqual(
+    hbs`{{^boolean}}This should be rendered.{{/boolean}}`({
+      boolean: false
+    }),
+    'This should be rendered.'
+  );
+  t.end();
+});

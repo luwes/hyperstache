@@ -1,0 +1,8 @@
+{
+  "name": "hyperstache-runtime-mini",
+  "private": true,
+  "version": "0.0.1",
+  "description": "Hyperstache runtime mini, no built-in helpers.",
+  "module": "../module/runtime-mini.js",
+  "main": "../dist/runtime-mini.js"
+}

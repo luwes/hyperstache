@@ -13,8 +13,7 @@ export const helpers = MINI
 
 export function expr(field, context, options) {
   options = options || {};
-  options.data = options.data || {};
-  options.data.root = context;
+  (options.data = options.data || {}).root = context;
 
   return helpers[field]
     ? block(field, context, options)
@@ -23,8 +22,7 @@ export function expr(field, context, options) {
 
 export function block(field, context, options) {
   options = options || {};
-  options.data = options.data || {};
-  options.data.root = context;
+  (options.data = options.data || {}).root = context;
   options.params = options.params || [];
   options.hash = options.hash || {};
   options.inverse = options.inverse || (() => '');
