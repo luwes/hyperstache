@@ -2,6 +2,13 @@
 
 This project adheres to [Semantic Versioning](http://semver.org/).
 
+## 0.5.1 - 2019-10-29
+
+### Changed
+
+- Golfed down some bytes.
+- Added `hyperstache/runtime-mini` for Babel plugin.
+
 ## 0.5.0 - 2019-10-29
 
 ### Added

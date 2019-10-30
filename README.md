@@ -1,7 +1,7 @@
 # Hyperstache
 
 [![Build Status](https://img.shields.io/travis/com/luwes/hyperstache/master.svg?style=flat-square&label=Travis+CI)](https://travis-ci.com/luwes/hyperstache)
-![Badge size](https://img.badgesize.io/https://unpkg.com/hyperstache/dist/hyperstache.js?compression=gzip&label=gzip&style=flat-square)
+![Badge size](https://img.badgesize.io/https://unpkg.com/hyperstache/dist/hyperstache.min.js?compression=gzip&label=gzip&style=flat-square)
 [![codecov](https://img.shields.io/codecov/c/github/luwes/hyperstache.svg?style=flat-square)](https://codecov.io/gh/luwes/hyperstache)
 [![code style: prettier](https://img.shields.io/badge/code_style-prettier-ff69b4.svg?style=flat-square)](https://github.com/prettier/prettier)
 
@@ -25,11 +25,11 @@ The goal is to make projects invested in Handlebars templates adopt a tagged tem
 
 ## `hyperstache` by the numbers:
 
-🚙 **2.15kB** when used directly in the browser
+🚙 **2.07kB** when used directly in the browser
 
-🏍 **1.85kB** `hyperstache/mini` version ~~(built-in helpers)~~
+🏍 **1.74kB** `hyperstache/mini` version ~~(built-in helpers)~~
 
-🏎 **1.15kB** if compiled using [babel-plugin-hyperstache](./packages/babel-plugin-hyperstache)
+🏎 **1.07kB** if compiled using [babel-plugin-hyperstache](./packages/babel-plugin-hyperstache)
 
 ## Features
 
