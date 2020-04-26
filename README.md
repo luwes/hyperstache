@@ -21,7 +21,7 @@ The goal is to make projects invested in Handlebars templates adopt a tagged tem
 - [Sinuous](https://github.com/luwes/sinuous/) ([CodeSandbox](https://codesandbox.io/s/hyperstache-sinuous-5j4u9))
 - [htm](https://github.com/developit/htm) ([CodeSandbox](https://codesandbox.io/s/hyperstache-htm-ju83x))
 - [Lighterhtml](https://github.com/WebReflection/lighterhtml) ([CodeSandbox](https://codesandbox.io/s/hyperstache-lighterhtml-qnesy))
-- [lit-html](https://github.com/Polymer/lit-html)
+- [lit-html](https://github.com/Polymer/lit-html) ([CodeSandbox](https://codesandbox.io/s/hyperstache-lithtml-xip2v))
 
 ## `hyperstache` by the numbers:
 
